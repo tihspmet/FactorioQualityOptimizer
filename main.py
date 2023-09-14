@@ -4,7 +4,7 @@ import numpy as np
 NUM_MODULES = 4
 RECYCLING_RATIO = 0.25
 PROD_BONUS = 0.25
-QUALITY_PROBABILITY = 0.06
+QUALITY_PROBABILITY = 0.0625
 NUM_QUALITIES = 5
 
 def initialize_recipe_matrix(frac_quality):
