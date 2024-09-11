@@ -51,7 +51,10 @@ The last (legendary) production recipe is always prodded.
 import itertools
 import numpy as np
 
-NUM_MODULES = 4
+# EMP allows 5 modules and 50% prod bonus
+NUM_RECYCLING_MODULES = 4
+NUM_CRAFTING_MODULES = 5
+ASSEMBLER_PROD_BONUS = 0.5
 RECYCLING_RATIO = 0.25
 PROD_BONUS = 0.25
 QUALITY_PROBABILITY = 0.062
@@ -59,8 +62,8 @@ NUM_QUALITIES = 5
 
 def initialize_recipe_matrix(frac_quality):
     frac_prod = 1-frac_quality
-    q = NUM_MODULES * QUALITY_PROBABILITY * frac_quality
-    p = 1 + NUM_MODULES * PROD_BONUS * frac_prod
+    q = NUM_CRAFTING_MODULES * QUALITY_PROBABILITY * frac_quality
+    p = 1 + NUM_CRAFTING_MODULES * PROD_BONUS * frac_prod + ASSEMBLER_PROD_BONUS
     # setup recipe matrix
     X = np.zeros((NUM_QUALITIES, NUM_QUALITIES))
 
@@ -74,12 +77,12 @@ def initialize_recipe_matrix(frac_quality):
     for i in range(NUM_QUALITIES-1):
         X[i, NUM_QUALITIES-1] = 10**(i-NUM_QUALITIES+2) * q[i] * p[i]
 
-    X[NUM_QUALITIES-1, NUM_QUALITIES-1] = 1 + NUM_MODULES * PROD_BONUS
+    X[NUM_QUALITIES-1, NUM_QUALITIES-1] = 1 + NUM_CRAFTING_MODULES * PROD_BONUS + ASSEMBLER_PROD_BONUS
     return X.T
 
 def initialize_recycling_matrix():
     # setup recycling matrix
-    r = NUM_MODULES * QUALITY_PROBABILITY
+    r = NUM_RECYCLING_MODULES * QUALITY_PROBABILITY
     R = np.zeros((NUM_QUALITIES-1, NUM_QUALITIES))
 
     for i in range(NUM_QUALITIES-1):
@@ -114,7 +117,7 @@ def solve(frac_quality, input, goal):
 def optimize_modules(input, goal):
     best_frac_quality = None
     best_num_input = 9999999
-    possible_frac_qualities = np.array([0, 0.25, 0.5, 0.75, 1])
+    possible_frac_qualities = np.array([0, 0.2, 0.4, 0.6, 0.8, 1.0])
     for frac_quality in itertools.product(possible_frac_qualities, repeat=4):
         frac_quality = np.array(frac_quality)
         num_input = solve(frac_quality, input, goal)
