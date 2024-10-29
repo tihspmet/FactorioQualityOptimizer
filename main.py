@@ -48,118 +48,291 @@ The code below represents i1-i5 as the five quality inputs, i6-i10 as the five q
 We use itertools to loop over all permutations of 0/4, 1/3, 2/2, 3/1, 4/0 in the first four production recipes to find the best one.
 The last (legendary) production recipe is always prodded.
 '''
+import argparse
 import itertools
 import numpy as np
 
-# EMP allows 5 modules and 50% prod bonus
 NUM_RECYCLING_MODULES = 4
-NUM_CRAFTING_MODULES = 5
-ASSEMBLER_PROD_BONUS = 0.5
 RECYCLING_RATIO = 0.25
-PROD_BONUS = 0.25
-QUALITY_PROBABILITY = 0.062
-NUM_QUALITIES = 5
 
-def initialize_recipe_matrix(frac_quality):
-    frac_prod = 1-frac_quality
-    q = NUM_CRAFTING_MODULES * QUALITY_PROBABILITY * frac_quality
-    p = 1 + NUM_CRAFTING_MODULES * PROD_BONUS * frac_prod + ASSEMBLER_PROD_BONUS
-    # setup recipe matrix
-    X = np.zeros((NUM_QUALITIES, NUM_QUALITIES))
+QUALITY_PROBABILITIES = [
+    [.01, .013, .016, .019, .025],
+    [.02, .016, .032, .038, .05],
+    [.025, .032, .04, .047, .062]
+]
+PROD_BONUSES = [
+    [.04, .05, .06, .07, 0.1],
+    [.06, .07, .09, .11, .15],
+    [.1, .13, .16, .19, .25]
+]
 
-    for i in range(NUM_QUALITIES-1):
-        X[i,i] = (1-q[i]) * p[i]
+class NoRecyclerSolver:
 
-    for i in range(0, NUM_QUALITIES-2):
-        for j in range(i+1, NUM_QUALITIES-1):
-            X[i,j] = 0.9 * 10**(i-j+1) * q[i] * p[i]
+    def __init__(self, starting_quality, ending_quality, max_quality,\
+            prod_module_bonus, quality_module_probability, enable_recycling, module_slots, additional_prod):
+        self.starting_quality=starting_quality
+        self.ending_quality=ending_quality
+        self.max_quality=max_quality
+        self.prod_module_bonus=prod_module_bonus
+        self.quality_module_probability=quality_module_probability
+        self.enable_recycling=enable_recycling
+        self.module_slots=module_slots
+        self.additional_prod=additional_prod
 
-    for i in range(NUM_QUALITIES-1):
-        X[i, NUM_QUALITIES-1] = 10**(i-NUM_QUALITIES+2) * q[i] * p[i]
+        self.max_quality_increase = max_quality - starting_quality
+        self.end_quality_increase = ending_quality - starting_quality
+        self.num_quality_items_in_solver = max_quality - starting_quality + 1
+        self.num_quality_recipes_in_solver = ending_quality - starting_quality + 1
+        self.num_extra_qualities = max_quality - ending_quality
 
-    X[NUM_QUALITIES-1, NUM_QUALITIES-1] = 1 + NUM_CRAFTING_MODULES * PROD_BONUS + ASSEMBLER_PROD_BONUS
-    return X.T
+    def initialize_recipe_matrix(self, frac_quality):
+        frac_prod = 1-frac_quality
+        q = self.module_slots * self.quality_module_probability * frac_quality
+        p = 1 + self.module_slots * self.prod_module_bonus * frac_prod + self.additional_prod
+        # setup recipe matrix
+        X = np.zeros(self.num_quality_items_in_solver)
 
-def initialize_recycling_matrix():
-    # setup recycling matrix
-    r = NUM_RECYCLING_MODULES * QUALITY_PROBABILITY
-    R = np.zeros((NUM_QUALITIES-1, NUM_QUALITIES))
+        X[0] = (1-q) * p
 
-    for i in range(NUM_QUALITIES-1):
-        R[i, i] = (1-r)
+        for i in range(self.num_quality_items_in_solver-1):
+            X[i] = 0.9 * 10**(-i+1) * q * p
 
-    for i in range(0, NUM_QUALITIES-2):
-        for j in range(i+1, NUM_QUALITIES-1):
-            R[i,j] = 0.9 * 10**(i-j+1) * r
+        X[self.num_quality_items_in_solver-1] = 10**(-self.num_quality_items_in_solver+2) * q * p
 
-    for i in range(NUM_QUALITIES-1):
-        R[i, NUM_QUALITIES-1] = 10**(i-NUM_QUALITIES+2) * r
+        return X.reshape((self.num_quality_items_in_solver, 1))
 
-    R *= RECYCLING_RATIO
-    return R.T
+    def solve(self, frac_quality):
+        # convert to matrix for row reduction
+        X = self.initialize_recipe_matrix(frac_quality)
 
-def solve(frac_quality, input, goal):
-    X = initialize_recipe_matrix(frac_quality)
-    R = initialize_recycling_matrix()
-    # convert to matrix for row reduction
-    X_inputs = -np.identity(NUM_QUALITIES)
-    R_inputs = np.block([[-np.identity(NUM_QUALITIES-1)], [np.zeros((1, NUM_QUALITIES-1))]])
-    recipes = np.block([
-            [X_inputs, R],
-            [X, R_inputs]
-    ])
-    eqs = np.block([[recipes, input.reshape(NUM_QUALITIES*2, 1)]])
+        X_inputs = -np.ones((1, 1))
+        recipes = np.block([
+                [X_inputs],
+                [X]
+        ])
 
-    result = np.linalg.solve(eqs, goal)
-    num_input = result[-1]
-    return num_input
-
-def optimize_modules(input, goal):
-    best_frac_quality = None
-    best_num_input = 9999999
-    possible_frac_qualities = np.array([0, 0.2, 0.4, 0.6, 0.8, 1.0])
-    for frac_quality in itertools.product(possible_frac_qualities, repeat=4):
-        frac_quality = np.array(frac_quality)
-        num_input = solve(frac_quality, input, goal)
-        if num_input < best_num_input:
-            best_num_input = num_input
-            best_frac_quality = frac_quality
-    return (best_frac_quality, best_num_input)
-
-def loop_over_goals():
-    for i in range(1, NUM_QUALITIES):
-        input = np.zeros(NUM_QUALITIES*2)
+        input = np.zeros((self.num_quality_items_in_solver+1,1))
         input[0] = 1
-        goal = np.zeros(NUM_QUALITIES*2)
-        goal[i] = 1
-        best_frac_quality, best_num_input = optimize_modules(input, goal)
-        print(f'Optimizing Q1 Input to Q{i+1} Input: {best_num_input}')
-        print(f'num Q1: {best_num_input}')
-        print(f'quality ratios: {best_frac_quality}')
+
+        # every quality except the one of interest is a free item
+        first_row = np.zeros((1, self.num_quality_items_in_solver))
+        free_items = -np.identity(self.num_quality_items_in_solver)
+        free_items = np.block([[first_row], [free_items]])
+        free_items = np.delete(free_items, self.ending_quality-1, 1)
+
+        eqs = np.block([[recipes, free_items, input]])
+
+        goal = np.zeros(self.num_quality_items_in_solver+1)
+        goal[-1-self.num_extra_qualities] = 1
+
+        result = np.linalg.solve(eqs, goal)
+        return result
+
+    def optimize_modules(self):
+        best_result = None
+        best_num_input = 9999999
+        possible_frac_qualities = np.linspace(1.0/self.module_slots, 1.0, num=self.module_slots)
+        for frac_quality in possible_frac_qualities:
+            result = self.solve(frac_quality)
+            num_input = result[-1]
+            if num_input < best_num_input:
+                best_num_input = num_input
+                best_frac_quality = frac_quality
+                best_result = result
+        return (best_frac_quality, best_result)
+    
+    def run(self):
+        print('')
+        print(f'optimizing production of output quality {self.ending_quality} from input quality {self.starting_quality}')
         print('')
 
-    for i in range(1, NUM_QUALITIES):
-        input = np.zeros(NUM_QUALITIES*2)
-        input[0] = 1
-        goal = np.zeros(NUM_QUALITIES*2)
-        goal[i+NUM_QUALITIES] = 1
-        best_frac_quality, best_num_input = optimize_modules(input, goal)
-        print(f'Optimizing Q1 Input to Q{i+1} Output: {best_num_input}')
-        print(f'num Q1: {best_num_input}')
-        print(f'quality ratios: {best_frac_quality}')
+        best_frac_quality, best_result = self.optimize_modules()
+        best_num_input = best_result[-1]
+
+        print(f'q{self.starting_quality} input per q{self.ending_quality} output: {best_num_input}')
+        qual_modules = int(best_frac_quality*self.module_slots)
+        prod_modules = int((1-best_frac_quality)*self.module_slots)
+        print(f'optimal recipe uses {qual_modules} quality modules and {prod_modules} prod modules')
         print('')
 
-np.set_printoptions(linewidth=10000, suppress=True, )
+        print(f'you also get the following byproducts for each q{self.ending_quality} output:')
+        free_item_idx = 1
+        for i in range(self.starting_quality, self.max_quality+1):
+            if i != self.ending_quality:
+                print(f'q{i} output: {best_result[free_item_idx]}')
+                free_item_idx += 1
+
+class RecyclerSolver:
+
+    def __init__(self, starting_quality, ending_quality, max_quality,\
+            prod_module_bonus, quality_module_probability, enable_recycling, module_slots, additional_prod):
+        self.starting_quality=starting_quality
+        self.ending_quality=ending_quality
+        self.max_quality=max_quality
+        self.prod_module_bonus=prod_module_bonus
+        self.quality_module_probability=quality_module_probability
+        self.enable_recycling=enable_recycling
+        self.module_slots=module_slots
+        self.additional_prod=additional_prod
+
+        self.max_quality_increase = max_quality - starting_quality
+        self.end_quality_increase = ending_quality - starting_quality
+        self.num_quality_items_in_solver = max_quality - starting_quality + 1
+        self.num_quality_recipes_in_solver = ending_quality - starting_quality + 1
+        self.num_extra_qualities = max_quality - ending_quality
+
+    def initialize_recipe_matrix(self, frac_quality):
+        frac_prod = 1-frac_quality
+        q = self.module_slots * self.quality_module_probability * frac_quality
+        p = 1 + self.module_slots * self.prod_module_bonus * frac_prod + self.additional_prod
+        # setup recipe matrix
+        X = np.zeros((self.num_quality_recipes_in_solver, self.num_quality_items_in_solver))
+
+        for i in range(self.num_quality_recipes_in_solver-1):
+            X[i,i] = (1-q[i]) * p[i]
+
+        for i in range(0, self.num_quality_recipes_in_solver-1):
+            for j in range(i+1, self.num_quality_items_in_solver-1):
+                X[i,j] = 0.9 * 10**(i-j+1) * q[i] * p[i]
+
+        for i in range(self.num_quality_recipes_in_solver-1):
+            X[i, self.num_quality_items_in_solver-1] = 10**(i-self.num_quality_items_in_solver+2) * q[i] * p[i]
+
+        X[self.num_quality_recipes_in_solver-1, self.num_quality_recipes_in_solver-1] = 1 + self.module_slots * self.prod_module_bonus + self.additional_prod
+        return X.T
+
+    def initialize_recycling_matrix(self):
+        # setup recycling matrix
+        r = NUM_RECYCLING_MODULES * self.quality_module_probability
+        R = np.zeros((self.num_quality_recipes_in_solver-1, self.num_quality_items_in_solver))
+
+        for i in range(self.num_quality_recipes_in_solver-1):
+            R[i, i] = (1-r)
+
+        for i in range(0, self.num_quality_recipes_in_solver-1):
+            for j in range(i+1, self.num_quality_items_in_solver-1):
+                R[i,j] = 0.9 * 10**(i-j+1) * r
+
+        for i in range(self.num_quality_recipes_in_solver-1):
+            R[i, self.num_quality_items_in_solver-1] = 10**(i-self.num_quality_items_in_solver+2) * r
+
+        R *= RECYCLING_RATIO
+        return R.T
+    
+    def initialize_input_matrix(self, num_cols):
+        input = np.zeros((self.num_quality_items_in_solver, num_cols))
+        for i in range(num_cols):
+            input[i,i] = -1
+        return input
+
+    def solve(self, frac_quality):
+        # convert to matrix for row reduction
+        X = self.initialize_recipe_matrix(frac_quality)
+        R = self.initialize_recycling_matrix()
+        X_inputs = self.initialize_input_matrix(self.num_quality_recipes_in_solver)
+        R_inputs = self.initialize_input_matrix(self.num_quality_recipes_in_solver-1)
+        recipes = np.block([
+                [X_inputs, R],
+                [X, R_inputs]
+        ])
+        input = np.zeros((self.num_quality_items_in_solver*2,1))
+        input[0] = 1
+
+        free_items = np.zeros((self.num_quality_items_in_solver*2, self.num_extra_qualities*2))
+        for i in range(self.num_extra_qualities):
+            free_items[self.num_quality_recipes_in_solver+i, 2*i] = -1
+            free_items[self.num_quality_items_in_solver+self.num_quality_recipes_in_solver+i, 2*i+1] = -1
+
+        eqs = np.block([[recipes, free_items, input]])
+
+        goal = np.zeros(self.num_quality_items_in_solver*2)
+        goal[-1-self.num_extra_qualities] = 1
+
+        result = np.linalg.solve(eqs, goal)
+        return result
+
+    def optimize_modules(self):
+        best_result = None
+        best_num_input = 9999999
+        possible_frac_qualities = np.linspace(0, 1.0, num=self.module_slots+1)
+        for frac_quality in itertools.product(possible_frac_qualities, repeat=self.end_quality_increase):
+            frac_quality = np.array(frac_quality)
+            try:
+                result = self.solve(frac_quality)
+            except np.linalg.LinAlgError as e:
+                continue
+            num_input = result[-1]
+            if num_input < best_num_input:
+                best_num_input = num_input
+                best_frac_quality = frac_quality
+                best_result = result
+        return (best_frac_quality, best_result)
+    
+    def run(self):
+        print('')
+        print(f'optimizing production of output quality {self.ending_quality} from input quality {self.starting_quality}')
+        print('')
+
+        best_frac_quality, best_result = self.optimize_modules()
+        best_num_input = best_result[-1]
+
+        print(f'q{self.starting_quality} input per q{self.ending_quality} output: {best_num_input}')
+        for i in range(self.starting_quality, self.ending_quality-1):
+            qual_modules = int(best_frac_quality[i]*self.module_slots)
+            prod_modules = int((1-best_frac_quality[i])*self.module_slots)
+            print(f'recipe q{i} uses {qual_modules} quality modules and {prod_modules} prod modules')
+        print(f'recipe q{self.ending_quality-1} uses 0 quality modules and {self.module_slots} prod modules')
+
+        if(self.num_extra_qualities > 0):
+            print('')
+            print(f'as an additional bonus you get the following for each q{self.ending_quality} output:')
+            free_item_results = best_result[-(self.num_extra_qualities*2)-1:-1:]
+            for i in range(self.num_extra_qualities):
+                print(f'q{self.max_quality-self.num_extra_qualities+i+1} ingredient: {free_item_results[i*2]}')
+                print(f'q{self.max_quality-self.num_extra_qualities+i+1} output: {free_item_results[i*2+1]}')
 
 if __name__ == '__main__':
-    #loop_over_goals()
+    parser = argparse.ArgumentParser(
+        prog='Factorio Quality Optimizer',
+        description='This program optimizes prod/qual ratios in factories, and calculates outputs for a given input',
+    )
+    parser.add_argument('-pt', '--productivity-tier', type=int, default=3, help='Productivity module tier. Number from 1 to 3. Default=3')
+    parser.add_argument('-qt', '--quality-tier', type=int, default=3, help='Quality module tier. Number from 1 to 3. Default=3')
+    parser.add_argument('-q', '--module-quality', type=int, default=5, help='Quality of the modules in the assembler and recycler (if present). Number from 1 to 5. Default=5')
+    parser.add_argument('-sq', '--starting-quality', type=int, default=1, help='Starting quality ingredient. Number from 1 to 4. Default=1')
+    parser.add_argument('-eq', '--ending-quality', type=int, default=5, help='Ending quality to optimize. Number from 2 to 5. Must be greater than starting quality. Default=5')
+    parser.add_argument('-mq', '--max-quality', type=int, default=5, help='Max quality unlocked. Number from 3 to 5. Must be greater than or equal to ending quality. Default=5')
+    parser.add_argument('-r', '--enable-recycling', action='store_true', help='Enables recycling loops. Set this flag if you have unlocked the recycler. This flag is set by default.')
+    parser.add_argument('-nr', '--no-enable-recycling', dest='enable_recycling', action='store_false', help='Disables recycling loops. Set this flag if you have not unlocked the recycler.')
+    parser.add_argument('-ms', '--module-slots', type=int, default=4, help='number of module slots in the crafting building. Default=4')
+    parser.add_argument('-p', '--additional-prod', type=float, default=0, help='any extra prod bonus, either from the building or recipe research. Units are percent out of 100. For example if using the foundry, enter 50. Default=0')
+    parser.set_defaults(enable_recycling=True)
+    args = parser.parse_args()
 
-    input = np.zeros(NUM_QUALITIES*2)
-    input[0] = 1
-    goal = np.zeros(NUM_QUALITIES*2)
-    goal[-1] = 1
-    best_frac_quality, best_num_input = optimize_modules(input, goal)
-    print(f'Optimizing Q1 Input to Q5 Output')
-    print(f'num Q1 input: {best_num_input}')
-    print(f'quality ratios: {best_frac_quality}')
-    print('')
+    prod_module_bonus = PROD_BONUSES[args.productivity_tier-1][args.module_quality-1]
+    quality_module_probability = QUALITY_PROBABILITIES[args.quality_tier-1][args.module_quality-1]
+
+    if(args.enable_recycling):
+        solver = RecyclerSolver(
+            starting_quality=args.starting_quality,
+            ending_quality=args.ending_quality,
+            max_quality=args.max_quality,
+            prod_module_bonus=prod_module_bonus,
+            quality_module_probability=quality_module_probability,
+            enable_recycling=args.enable_recycling,
+            module_slots=args.module_slots,
+            additional_prod=args.additional_prod/100,
+        )
+    else:
+        solver = NoRecyclerSolver(
+            starting_quality=args.starting_quality,
+            ending_quality=args.ending_quality,
+            max_quality=args.max_quality,
+            prod_module_bonus=prod_module_bonus,
+            quality_module_probability=quality_module_probability,
+            enable_recycling=args.enable_recycling,
+            module_slots=args.module_slots,
+            additional_prod=args.additional_prod/100,
+        )
+
+    solver.run()
