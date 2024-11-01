@@ -16,7 +16,7 @@ Sometimes the optimal mix is skewed more towards quality modules and sometimes t
 
 This script optimizes the prod/qual modules at each quality stage in a recycling loop, and prints the number of low-quality inputs to high-quality outputs.
 It also prints out any extra by-products, such as how many higher-quality items will be produced than the one being requested.
-Note the recycler always has four recycling modules.
+Note the recycler always has four quality modules.
 All of the allowed parameters are shown below, and are also shown with the command `$ python ./main.py --help`:
 
 ```
