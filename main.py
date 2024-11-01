@@ -150,8 +150,8 @@ class NoRecyclerSolver:
         best_num_input = best_result[-1]
 
         print(f'q{self.starting_quality} input per q{self.ending_quality} output: {best_num_input}')
-        qual_modules = int(best_frac_quality*self.module_slots)
-        prod_modules = int((1-best_frac_quality)*self.module_slots)
+        qual_modules = round(best_frac_quality*self.module_slots)
+        prod_modules = round((1-best_frac_quality)*self.module_slots)
         print(f'optimal recipe uses {qual_modules} quality modules and {prod_modules} prod modules')
         print('')
 
@@ -278,8 +278,8 @@ class RecyclerSolver:
 
         print(f'q{self.starting_quality} input per q{self.ending_quality} output: {best_num_input}')
         for i in range(self.starting_quality, self.ending_quality-1):
-            qual_modules = int(best_frac_quality[i]*self.module_slots)
-            prod_modules = int((1-best_frac_quality[i])*self.module_slots)
+            qual_modules = round(best_frac_quality[i]*self.module_slots)
+            prod_modules = round((1-best_frac_quality[i])*self.module_slots)
             print(f'recipe q{i} uses {qual_modules} quality modules and {prod_modules} prod modules')
         print(f'recipe q{self.ending_quality-1} uses 0 quality modules and {self.module_slots} prod modules')
 
