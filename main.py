@@ -164,8 +164,17 @@ class NoRecyclerSolver:
 
 class RecyclerSolver:
 
-    def __init__(self, starting_quality, ending_quality, max_quality,\
+    def __init__(self, starting_type, ending_type,starting_quality, ending_quality, max_quality,\
             prod_module_bonus, quality_module_probability, enable_recycling, module_slots, additional_prod):
+
+        self.starting_type=args.starting_type.lower()
+        self.ending_type=args.ending_type.lower()
+
+        if(self.starting_type) not in ['ingredient', 'product']:
+            raise ValueError('starting type must be either \'ingredient\' or \'product\'')
+        if(self.ending_type) not in ['ingredient', 'product']:
+            raise ValueError('ending type must be either \'ingredient\' or \'product\'')
+
         self.starting_quality=starting_quality
         self.ending_quality=ending_quality
         self.max_quality=max_quality
@@ -180,6 +189,8 @@ class RecyclerSolver:
         self.num_quality_items_in_solver = max_quality - starting_quality + 1
         self.num_quality_recipes_in_solver = ending_quality - starting_quality + 1
         self.num_extra_qualities = max_quality - ending_quality
+
+        self.mat_size = 2*self.num_quality_items_in_solver
 
     def initialize_recipe_matrix(self, frac_quality):
         frac_prod = 1-frac_quality
@@ -235,8 +246,11 @@ class RecyclerSolver:
                 [X_inputs, R],
                 [X, R_inputs]
         ])
-        input = np.zeros((self.num_quality_items_in_solver*2,1))
-        input[0] = 1
+        input = np.zeros((self.mat_size,1))
+        if(self.starting_type=='ingredient'):
+            input[0] = 1
+        elif(self.starting_type=='product'):
+            input[self.num_quality_items_in_solver] = 1
 
         free_items = np.zeros((self.num_quality_items_in_solver*2, self.num_extra_qualities*2))
         for i in range(self.num_extra_qualities):
@@ -245,8 +259,11 @@ class RecyclerSolver:
 
         eqs = np.block([[recipes, free_items, input]])
 
-        goal = np.zeros(self.num_quality_items_in_solver*2)
-        goal[-1-self.num_extra_qualities] = 1
+        goal = np.zeros(self.mat_size)
+        if(self.ending_type=='ingredient'):
+            goal[self.num_quality_items_in_solver-1-self.num_extra_qualities] = 1
+        if(self.ending_type=='product'):
+            goal[-1-self.num_extra_qualities] = 1
 
         result = np.linalg.solve(eqs, goal)
         return result
@@ -296,6 +313,8 @@ if __name__ == '__main__':
         prog='Factorio Quality Optimizer',
         description='This program optimizes prod/qual ratios in factories, and calculates outputs for a given input',
     )
+    parser.add_argument('-st', '--starting-type', type=str, default='ingredient', help='Starting item type. String that is either \'ingredient\' or \'product\'. Ignored if --no-recycling flag is set, as starting type must be ingredient. Default=\'ingredient\'.')
+    parser.add_argument('-et', '--ending-type', type=str, default='product', help='Ending item type. String that is either \'ingredient\' or \'product\'. Ignored if --no-recycling flag is set, as ending type must be product. Default=\'product\'.')
     parser.add_argument('-pt', '--productivity-tier', type=int, default=3, help='Productivity module tier. Number from 1 to 3. Default=3')
     parser.add_argument('-qt', '--quality-tier', type=int, default=3, help='Quality module tier. Number from 1 to 3. Default=3')
     parser.add_argument('-q', '--module-quality', type=int, default=5, help='Quality of the modules in the assembler and recycler (if present). Number from 1 to 5. Default=5')
@@ -312,8 +331,12 @@ if __name__ == '__main__':
     prod_module_bonus = PROD_BONUSES[args.productivity_tier-1][args.module_quality-1]
     quality_module_probability = QUALITY_PROBABILITIES[args.quality_tier-1][args.module_quality-1]
 
+    print(f'starting_type: {args.starting_type}')
+
     if(args.enable_recycling):
         solver = RecyclerSolver(
+            starting_type=args.starting_type,
+            ending_type=args.ending_type,
             starting_quality=args.starting_quality,
             ending_quality=args.ending_quality,
             max_quality=args.max_quality,
@@ -325,6 +348,8 @@ if __name__ == '__main__':
         )
     else:
         solver = NoRecyclerSolver(
+            starting_type=args.starting_type,
+            ending_type=args.ending_type,
             starting_quality=args.starting_quality,
             ending_quality=args.ending_quality,
             max_quality=args.max_quality,
