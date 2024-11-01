@@ -6,7 +6,7 @@ The latest expansion to Factorio introduced [Quality](https://factorio.com/blog/
 However, producing higher tiers of quality is exponentially difficult, as the probability of increasing quality by even one tier is quite small, let alone trying to make Legendary.
 One way to automate the crafting of higher-tier quality items is to recycle lower-quality items that are below the desired tier, as demonstrated in the original quality FFF that only retains rare and above:
 
-<video controls src="fff-375-quality-recycling.mp4" title=")"></video>
+![alt text](fff-375-quality-recycling.jpg)
 
 However, optimal recycling loops are not as simple as shoving quality modules everywhere, and often require a mix of prod and quality modules.
 The optimal mix depends significantly on factors such as the module tiers (1-3), the module qualities (1-5), the starting and ending qualities being crafted, and any additional prod bonuses.
