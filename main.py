@@ -293,12 +293,13 @@ class RecyclerSolver:
         best_frac_quality, best_result = self.optimize_modules()
         best_num_input = best_result[-1]
 
+        # note that input/output qualities used start at 1 but the code starts at 0 for indexing
         print(f'q{self.starting_quality} input per q{self.ending_quality} output: {best_num_input}')
-        for i in range(self.starting_quality, self.ending_quality-1):
-            qual_modules = round(best_frac_quality[i]*self.module_slots)
-            prod_modules = round((1-best_frac_quality[i])*self.module_slots)
+        for i in range(self.starting_quality, self.ending_quality):
+            qual_modules = round(best_frac_quality[i-1]*self.module_slots)
+            prod_modules = round((1-best_frac_quality[i-1])*self.module_slots)
             print(f'recipe q{i} uses {qual_modules} quality modules and {prod_modules} prod modules')
-        print(f'recipe q{self.ending_quality-1} uses 0 quality modules and {self.module_slots} prod modules')
+        print(f'recipe q{self.ending_quality} uses 0 quality modules and {self.module_slots} prod modules')
 
         if(self.num_extra_qualities > 0):
             print('')
