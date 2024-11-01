@@ -287,7 +287,7 @@ class RecyclerSolver:
     
     def run(self):
         print('')
-        print(f'optimizing production of output quality {self.ending_quality} from input quality {self.starting_quality}')
+        print(f'optimizing recycling loop that turns {self.starting_type} quality {self.starting_quality} into {self.ending_type} quality {self.ending_quality}')
         print('')
 
         best_frac_quality, best_result = self.optimize_modules()
@@ -330,8 +330,6 @@ if __name__ == '__main__':
 
     prod_module_bonus = PROD_BONUSES[args.productivity_tier-1][args.module_quality-1]
     quality_module_probability = QUALITY_PROBABILITIES[args.quality_tier-1][args.module_quality-1]
-
-    print(f'starting_type: {args.starting_type}')
 
     if(args.enable_recycling):
         solver = RecyclerSolver(
