@@ -82,7 +82,7 @@ recipe q4 uses 0 quality modules and 4 prod modules
 
 ### Example 2
 
-Suppose instead you're mid-game and all have tier 3 modules, but they are only level 2 quality (uncommon). Also suppose you haven't unlocked epic yet, and want to a recycling loop that turns normal ingredients into uncommon products, and you're using the electromagnetics plant with 5 modules slots and built-in productivity of 50%:
+Suppose instead you're mid-game and have all tier 3 modules, but they are only level 2 quality (uncommon). Also suppose you haven't unlocked epic yet, and want to do a recycling loop that turns normal ingredients into uncommon products, and you're using the electromagnetics plant with 5 modules slots and built-in productivity of 50%:
 
 ```
 $ python ./main.py --productivity-tier 3 --quality-tier 3 --module-quality 2 --starting-quality 1 --ending-quality 2 --max-quality 3 --module-slots 5 --additional-prod 50
@@ -99,7 +99,7 @@ q3 output: 0.08162732229731934
 
 If we're optimizing for uncommon, we don't want any quality modules in the electromagnetics plant!
 
-Now let's try the same as above but optimizing for rare outputs:
+Now let's try the same as above but optimizing for rare outputs. We change `--ending-quality 2` to `--ending-quality 3`:
 ```
 $ python ./main.py --productivity-tier 3 --quality-tier 3 --module-quality 2 --starting-quality 1 --ending-quality 3 --max-quality 3 --module-slots 5 --additional-prod 50
 
