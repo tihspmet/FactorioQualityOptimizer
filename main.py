@@ -215,7 +215,7 @@ class RecyclerSolver:
     def initialize_recycling_matrix(self):
         # setup recycling matrix
         r = NUM_RECYCLING_MODULES * self.quality_module_probability
-        R = np.zeros((self.num_quality_recipes_in_solver-1, self.num_quality_items_in_solver))
+        R = np.zeros((self.num_quality_recipes_in_solver, self.num_quality_items_in_solver))
 
         for i in range(self.num_quality_recipes_in_solver-1):
             R[i, i] = (1-r)
@@ -226,6 +226,8 @@ class RecyclerSolver:
 
         for i in range(self.num_quality_recipes_in_solver-1):
             R[i, self.num_quality_items_in_solver-1] = 10**(i-self.num_quality_items_in_solver+2) * r
+
+        R[self.num_quality_recipes_in_solver-1, self.num_quality_items_in_solver-1] = 1
 
         R *= RECYCLING_RATIO
         return R.T
@@ -241,16 +243,21 @@ class RecyclerSolver:
         X = self.initialize_recipe_matrix(frac_quality)
         R = self.initialize_recycling_matrix()
         X_inputs = self.initialize_input_matrix(self.num_quality_recipes_in_solver)
-        R_inputs = self.initialize_input_matrix(self.num_quality_recipes_in_solver-1)
+        R_inputs = self.initialize_input_matrix(self.num_quality_recipes_in_solver)
+        input = np.zeros((self.mat_size,1))
+        if(self.ending_type=='ingredient'):
+            X = X[:,:-1]
+            X_inputs = X_inputs[:,:-1]
+            input[0] = 1
+        elif(self.ending_type=='product'):
+            R = R[:,:-1]
+            R_inputs = R_inputs[:,:-1]
+            input[self.num_quality_items_in_solver] = 1
+
         recipes = np.block([
                 [X_inputs, R],
                 [X, R_inputs]
         ])
-        input = np.zeros((self.mat_size,1))
-        if(self.starting_type=='ingredient'):
-            input[0] = 1
-        elif(self.starting_type=='product'):
-            input[self.num_quality_items_in_solver] = 1
 
         free_items = np.zeros((self.num_quality_items_in_solver*2, self.num_extra_qualities*2))
         for i in range(self.num_extra_qualities):
