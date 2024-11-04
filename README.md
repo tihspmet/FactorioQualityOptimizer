@@ -20,38 +20,32 @@ Note the recycler always has four quality modules.
 All of the allowed parameters are shown below, and are also shown with the command `$ python ./main.py --help`:
 
 ```
-$ python ./main.py  --help
-usage: Factorio Quality Optimizer [-h] [-st STARTING_TYPE] [-et ENDING_TYPE] [-pt PRODUCTIVITY_TIER] [-qt QUALITY_TIER] [-q MODULE_QUALITY] [-sq STARTING_QUALITY] [-eq ENDING_QUALITY] [-mq MAX_QUALITY]
-                                  [-r] [-nr] [-ms MODULE_SLOTS] [-p ADDITIONAL_PROD]
-
 This program optimizes prod/qual ratios in factories, and calculates outputs for a given input
 
 options:
   -h, --help            show this help message and exit
   -st STARTING_TYPE, --starting-type STARTING_TYPE
-                        Starting item type. String that is either 'ingredient' or 'product'. Ignored if --no-recycling flag is set, as starting type must be ingredient. Default='ingredient'.
+                        Starting item type. String that is either 'ingredient' or 'product'. Ignored if --no-recycling flag is set, as starting type must be ingredient. (default: ingredient)
   -et ENDING_TYPE, --ending-type ENDING_TYPE
-                        Ending item type. String that is either 'ingredient' or 'product'. Ignored if --no-recycling flag is set, as ending type must be product. Default='product'.
+                        Ending item type. String that is either 'ingredient' or 'product'. Ignored if --no-recycling flag is set, as ending type must be product. (default: product)
   -pt PRODUCTIVITY_TIER, --productivity-tier PRODUCTIVITY_TIER
-                        Productivity module tier. Number from 1 to 3. Default=3
+                        Productivity module tier. Number from 1 to 3. (default: 3)
   -qt QUALITY_TIER, --quality-tier QUALITY_TIER
-                        Quality module tier. Number from 1 to 3. Default=3
+                        Quality module tier. Number from 1 to 3. (default: 3)
   -q MODULE_QUALITY, --module-quality MODULE_QUALITY
-                        Quality of the modules in the assembler and recycler (if present). Number from 1 to 5. Default=5
+                        Quality of the modules in the assembler and recycler (if present). Number from 1 to 5. (default: 5)
   -sq STARTING_QUALITY, --starting-quality STARTING_QUALITY
-                        Starting quality ingredient. Number from 1 to 4. Default=1
+                        Starting quality ingredient. Number from 1 to 4. (default: 1)
   -eq ENDING_QUALITY, --ending-quality ENDING_QUALITY
-                        Ending quality to optimize. Number from 2 to 5. Must be greater than starting quality. Default=5
+                        Ending quality to optimize. Number from 2 to 5. Must be greater than starting quality. (default: 5)
   -mq MAX_QUALITY, --max-quality MAX_QUALITY
-                        Max quality unlocked. Number from 3 to 5. Must be greater than or equal to ending quality. Default=5
-  -r, --enable-recycling
-                        Enables recycling loops. Set this flag if you have unlocked the recycler. This flag is set by default.
-  -nr, --no-enable-recycling
-                        Disables recycling loops. Set this flag if you have not unlocked the recycler.
+                        Max quality unlocked. Number from 3 to 5. Must be greater than or equal to ending quality. (default: 5)
+  --enable-recycling, --no-enable-recycling
+                        Enables recycling loops. Set this flag if you have unlocked the recycler. (default: True)
   -ms MODULE_SLOTS, --module-slots MODULE_SLOTS
-                        number of module slots in the crafting building. Default=4
+                        number of module slots in the crafting building. (default: 4)
   -p ADDITIONAL_PROD, --additional-prod ADDITIONAL_PROD
-                        any extra prod bonus, either from the building or recipe research. Units are percent out of 100. For example if using the foundry, enter 50. Default=0
+                        any extra prod bonus, either from the building or recipe research. Units are percent out of 100. For example if using the foundry, enter 50. (default: 0)
 ```
 
 The script is written in python and depends on the libraries in `requirements.txt`.
@@ -66,38 +60,48 @@ Detailed instructions on how to setup the required python environment is beyond 
 
 ### Example 1
 
-Suppose you're really late-game and have access to legendary tier 3 modules, while using an assembler with four modules slots, and want a recycling loop that turns normal ingredients into legendary products (note this is script with all defaults):
+Suppose you're really late-game and have access to legendary tier 3 modules, while using an assembler with four modules slots, and want a recycling loop that turns normal ingredients into legendary products (note this is script with all defaults).
+
+Command:
+```
+python ./main.py
+```
+
+Output:
 
 ```
-$ python ./main.py 
-
 optimizing recycling loop that turns ingredient quality 1 into product quality 5
 
 q1 input per q5 output: 79.87855759632312
 recipe q1 uses 2 quality modules and 2 prod modules
 recipe q2 uses 2 quality modules and 2 prod modules
 recipe q3 uses 2 quality modules and 2 prod modules
-recipe q4 uses 0 quality modules and 4 prod modules
+recipe q4 uses 2 quality modules and 2 prod modules
+recipe q5 uses 0 quality modules and 4 prod modules
 ```
 
 ### Example 2
 
-Suppose instead you're mid-game and have all tier 3 modules, but they are only level 2 quality (uncommon). Also suppose you haven't unlocked epic yet, and want to do a recycling loop that turns normal ingredients into uncommon products, and you're using the electromagnetics plant with 5 modules slots and built-in productivity of 50%:
+Suppose instead you're mid-game and have all tier 3 modules, but they are only level 2 quality (uncommon). Also suppose you haven't unlocked epic yet, and want to do a recycling loop that turns normal ingredients into uncommon products, and you're using the electromagnetics plant with 5 modules slots and built-in productivity of 50%.
 
+Command:
 ```
 $ python ./main.py --productivity-tier 3 --quality-tier 3 --module-quality 2 --starting-quality 1 --ending-quality 2 --max-quality 3 --module-slots 5 --additional-prod 50
+```
 
+Output:
+```
 optimizing recycling loop that turns ingredient quality 1 into product quality 2
 
 q1 input per q2 output: 2.466913725362153
-recipe q1 uses 0 quality modules and 5 prod modules
+recipe q1 uses 5 quality modules and 0 prod modules
+recipe q2 uses 0 quality modules and 5 prod modules
 
 as an additional bonus you get the following for each q2 output:
 q3 ingredient: 0.013713390145949652
 q3 output: 0.08162732229731934
-```
 
-If we're optimizing for uncommon, we don't want any quality modules in the electromagnetics plant!
+```
 
 Now let's try the same as above but optimizing for rare outputs. We change `--ending-quality 2` to `--ending-quality 3`:
 ```
@@ -107,34 +111,35 @@ optimizing recycling loop that turns ingredient quality 1 into product quality 3
 
 q1 input per q3 output: 8.524892733141074
 recipe q1 uses 5 quality modules and 0 prod modules
-recipe q2 uses 0 quality modules and 5 prod modules
+recipe q2 uses 5 quality modules and 0 prod modules
+recipe q3 uses 0 quality modules and 5 prod modules
 ```
 
-In this case we use different types of modules for each quality level!
-Going from normal to uncommon wants every module to be quality, while going from uncommon to rare wants every module to be productivity.
+So in this mid-game case the modules are more biased towards quality than prod.
 
 ### Example 3
 
 Suppose we're late-game (all modules are tier 3 legendary), and we want to turn an item into itself. Is it better to go up the production chain and down (craft then recycle), or down the production chain and back up (recycle then craft)? We'll just use normal assemblers (four module slots, no additional prod). This is where the `--starting-type` and `--ending-type` come in handy.
 
-Going up-then-down the production chain gives around 160 inputs/output:
+Going up-then-down the production chain gives 185.3 inputs/output:
 
 ```
-$ python ./main.py --starting-type ingredient --ending-type ingredient
+python ./main.py --starting-type ingredient --ending-type ingredient
 
 optimizing recycling loop that turns ingredient quality 1 into ingredient quality 5
 
-q1 input per q5 output: 159.75711519264624
+q1 input per q5 output: 185.2831782227558
 recipe q1 uses 2 quality modules and 2 prod modules
 recipe q2 uses 2 quality modules and 2 prod modules
-recipe q3 uses 2 quality modules and 2 prod modules
+recipe q3 uses 1 quality modules and 3 prod modules
 recipe q4 uses 0 quality modules and 4 prod modules
+recipe q5 uses 0 quality modules and 4 prod modules
 ```
 
-Going down-then-up the production chain gives around 172 inputs/output:
+Going down-then-up the production chain gives around 171.5 inputs/output:
 
 ```
-$ python ./main.py --starting-type product --ending-type product
+python ./main.py --starting-type product --ending-type product
 
 optimizing recycling loop that turns product quality 1 into product quality 5
 
@@ -142,7 +147,8 @@ q1 input per q5 output: 171.5214553581744
 recipe q1 uses 2 quality modules and 2 prod modules
 recipe q2 uses 2 quality modules and 2 prod modules
 recipe q3 uses 2 quality modules and 2 prod modules
-recipe q4 uses 0 quality modules and 4 prod modules
+recipe q4 uses 2 quality modules and 2 prod modules
+recipe q5 uses 0 quality modules and 4 prod modules
 ```
 
-So it's better to go up-then-down, which makes intuitive sense since we get extra prod on the way up, but the difference isn't that significant.
+So it's slightly better to go down-then-up, but not by much (171.5 vs 185.3).
