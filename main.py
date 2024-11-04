@@ -240,19 +240,24 @@ class RecyclerSolver:
 
     def solve(self, frac_quality):
         # convert to matrix for row reduction
+        input = np.zeros((self.mat_size,1))
+
+        if(self.starting_type=='ingredient'):
+            input[0] = 1
+        elif(self.starting_type=='product'):
+            input[self.num_quality_items_in_solver] = 1
+
         X = self.initialize_recipe_matrix(frac_quality)
         R = self.initialize_recycling_matrix()
         X_inputs = self.initialize_input_matrix(self.num_quality_recipes_in_solver)
         R_inputs = self.initialize_input_matrix(self.num_quality_recipes_in_solver)
-        input = np.zeros((self.mat_size,1))
+
         if(self.ending_type=='ingredient'):
             X = X[:,:-1]
             X_inputs = X_inputs[:,:-1]
-            input[0] = 1
         elif(self.ending_type=='product'):
             R = R[:,:-1]
             R_inputs = R_inputs[:,:-1]
-            input[self.num_quality_items_in_solver] = 1
 
         recipes = np.block([
                 [X_inputs, R],
