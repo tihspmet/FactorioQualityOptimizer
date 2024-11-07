@@ -165,7 +165,7 @@ class NoRecyclerSolver:
 class RecyclerSolver:
 
     def __init__(self, starting_type, ending_type,starting_quality, ending_quality, max_quality,\
-            prod_module_bonus, quality_module_probability, enable_recycling, module_slots, additional_prod):
+            prod_module_bonus, quality_module_probability, enable_recycling, module_slots, additional_prod, disable_prod):
 
         self.starting_type=starting_type.lower()
         self.ending_type=ending_type.lower()
@@ -183,6 +183,7 @@ class RecyclerSolver:
         self.enable_recycling=enable_recycling
         self.module_slots=module_slots
         self.additional_prod=additional_prod
+        self.disable_prod=disable_prod
 
         self.max_quality_increase = max_quality - starting_quality
         self.end_quality_increase = ending_quality - starting_quality
@@ -209,7 +210,10 @@ class RecyclerSolver:
         for i in range(self.num_quality_recipes_in_solver-1):
             X[i, self.num_quality_items_in_solver-1] = 10**(i-self.num_quality_items_in_solver+2) * q[i] * p[i]
 
-        X[self.num_quality_recipes_in_solver-1, self.num_quality_recipes_in_solver-1] = 1 + self.module_slots * self.prod_module_bonus + self.additional_prod
+        if self.disable_prod:
+            X[self.num_quality_recipes_in_solver-1, self.num_quality_recipes_in_solver-1] = 1 + self.additional_prod
+        else:           
+            X[self.num_quality_recipes_in_solver-1, self.num_quality_recipes_in_solver-1] = 1 + self.module_slots * self.prod_module_bonus + self.additional_prod
         return X.T
 
     def initialize_recycling_matrix(self):
@@ -308,10 +312,13 @@ class RecyclerSolver:
         # note that input/output qualities used start at 1 but the code starts at 0 for indexing
         print(f'q{self.starting_quality} input per q{self.ending_quality} output: {best_num_input}')
         for i in range(self.starting_quality, self.ending_quality):
-            qual_modules = round(best_frac_quality[i-1]*self.module_slots)
-            prod_modules = round((1-best_frac_quality[i-1])*self.module_slots)
+            qual_modules = round(best_frac_quality[i-1-self.starting_quality]*self.module_slots)
+            prod_modules = round((1-best_frac_quality[i-1-self.starting_quality])*self.module_slots)
             print(f'recipe q{i} uses {qual_modules} quality modules and {prod_modules} prod modules')
-        print(f'recipe q{self.ending_quality} uses 0 quality modules and {self.module_slots} prod modules')
+        if self.disable_prod:
+            print(f'recipe q{self.ending_quality} uses 0 quality modules and 0 prod modules')
+        else:
+            print(f'recipe q{self.ending_quality} uses 0 quality modules and {self.module_slots} prod modules')
 
         if(self.num_extra_qualities > 0):
             print('')
@@ -338,11 +345,15 @@ def main():
     parser.add_argument('--enable-recycling', default=True, action=argparse.BooleanOptionalAction, help='Enables recycling loops. Set this flag if you have unlocked the recycler.')
     parser.add_argument('-ms', '--module-slots', type=int, default=4, help='number of module slots in the crafting building.')
     parser.add_argument('-p', '--additional-prod', type=float, default=0, help='any extra prod bonus, either from the building or recipe research. Units are percent out of 100. For example if using the foundry, enter 50.')
+    parser.add_argument('--disable-prod', default=False, action=argparse.BooleanOptionalAction, help='Disables prod modules. Set this flag to calculate recipes that cannot use prod modules.')
     parser.set_defaults(enable_recycling=True)
     args = parser.parse_args()
 
     prod_module_bonus = PROD_BONUSES[args.productivity_tier-1][args.module_quality-1]
     quality_module_probability = QUALITY_PROBABILITIES[args.quality_tier-1][args.module_quality-1]
+
+    if(args.disable_prod):
+        prod_module_bonus = 0
 
     if(args.enable_recycling):
         solver = RecyclerSolver(
@@ -356,6 +367,7 @@ def main():
             enable_recycling=args.enable_recycling,
             module_slots=args.module_slots,
             additional_prod=args.additional_prod/100,
+            disable_prod=args.disable_prod
         )
     else:
         solver = NoRecyclerSolver(
