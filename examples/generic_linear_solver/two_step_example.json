@@ -1,0 +1,90 @@
+{
+    "quality_module_tier": 2,
+    "quality_module_quality_level": 4,
+    "prod_module_tier": 2,
+    "prod_module_quality_level": 4,
+    "max_quality_unlocked": 4,
+    "items": ["item-1", "item-2", "item-3"],
+    "inputs": [
+        "normal__item-1"
+    ],
+    "output": {
+        "item_id": "legendary__item-3",
+        "amount": 1.0
+    },
+    "minimize": "normal__item-1",
+    "recipes": [
+        {
+            "key": "craft-1-to-2",
+            "allow_productivity": true,
+            "module_slots": 4,
+            "additional_prod": 0,
+            "ingredients": [
+                {
+                    "name": "item-1",
+                    "amount": 1.0
+                }
+            ],
+            "results": [
+                {
+                    "name": "item-2",
+                    "amount": 1.0
+                }
+            ]
+        },
+        {
+            "key": "craft-2-to-3",
+            "allow_productivity": true,
+            "module_slots": 4,
+            "additional_prod": 0,
+            "ingredients": [
+                {
+                    "name": "item-2",
+                    "amount": 1.0
+                }
+            ],
+            "results": [
+                {
+                    "name": "item-3",
+                    "amount": 1.0
+                }
+            ]
+        },
+        {
+            "key": "recycle-2-to-1",
+            "allow_productivity": false,
+            "module_slots": 4,
+            "additional_prod": 0,
+            "ingredients": [
+                {
+                    "name": "item-2",
+                    "amount": 1.0
+                }
+            ],
+            "results": [
+                {
+                    "name": "item-1",
+                    "amount": 0.25
+                }
+            ]
+        },
+        {
+            "key": "recycle-3-to-2",
+            "allow_productivity": false,
+            "module_slots": 4,
+            "additional_prod": 0,
+            "ingredients": [
+                {
+                    "name": "item-3",
+                    "amount": 1.0
+                }
+            ],
+            "results": [
+                {
+                    "name": "item-2",
+                    "amount": 0.25
+                }
+            ]
+        }
+    ]
+}
