@@ -187,7 +187,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         prog='Generic Linear Solver',
-        description='This program optimizes prod/qual ratios in factories, and calculates outputs for a given input',
+        description='This program optimizes prod/qual ratios in factories in order to minimize inputs needed for a given output',
     )
     parser.add_argument('-c', '--config', type=str, default=default_config_path, help='Config file. Defaults to \'examples/one_step_example.json\'.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode. Prints out item and recipe information during setup.')
