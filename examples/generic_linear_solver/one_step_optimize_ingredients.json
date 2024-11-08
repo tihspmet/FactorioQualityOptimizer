@@ -5,20 +5,49 @@
     "prod_module_quality_level": 4,
     "max_quality_unlocked": 4,
     "items": ["item-1", "item-2"],
+    "module_cost": 0.0,
     "inputs": [
-        "normal__item-1"
+        {
+            "item_id": "normal__item-1",
+            "cost": 1.0
+        }
     ],
-    "output": {
-        "item_id": "legendary__item-2",
-        "amount": 1.0
-    },
-    "minimize": "normal__item-1",
+    "byproducts": [],
+    "outputs": [
+        {
+            "item_id": "legendary__item-2",
+            "amount": 1.0
+        }
+    ],
+    "recipe_vars": [
+        {
+            "crafting_machine": "assembling-machine-3",
+            "recipe": "craft-1-to-2"
+        },
+        {
+            "crafting_machine": "recycler",
+            "recipe": "recycle-2-to-1"
+        }
+    ],
+    "crafting_machines": [
+        {
+            "key": "assembling-machine-3",
+            "crafting_speed": 1.25,
+            "module_slots": 4,
+            "prod_bonus": 0
+        },
+        {
+            "key": "recycler",
+            "crafting_speed": 0.5,
+            "module_slots": 4,
+            "prod_bonus": 0
+        }
+    ],
     "recipes": [
         {
             "key": "craft-1-to-2",
             "allow_productivity": true,
-            "module_slots": 4,
-            "additional_prod": 0,
+            "energy_required": 1,
             "ingredients": [
                 {
                     "name": "item-1",
@@ -35,8 +64,7 @@
         {
             "key": "recycle-2-to-1",
             "allow_productivity": false,
-            "module_slots": 4,
-            "additional_prod": 0,
+            "energy_required": 0.25,
             "ingredients": [
                 {
                     "name": "item-2",
