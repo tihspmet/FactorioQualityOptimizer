@@ -2,12 +2,14 @@
     "crafting_machines": [
         {
             "key": "assembling-machine-3",
+            "crafting_categories": ["crafting"],
             "crafting_speed": 1.25,
             "module_slots": 4,
             "prod_bonus": 0
         },
         {
             "key": "recycler",
+            "crafting_categories": ["recycling"],
             "crafting_speed": 0.5,
             "module_slots": 4,
             "prod_bonus": 0
@@ -16,6 +18,7 @@
     "recipes": [
         {
             "key": "craft-1-to-2",
+            "category": "crafting",
             "allow_productivity": true,
             "energy_required": 1,
             "ingredients": [
@@ -33,6 +36,7 @@
         },
         {
             "key": "recycle-2-to-1",
+            "category": "recycling",
             "allow_productivity": false,
             "energy_required": 0.25,
             "ingredients": [

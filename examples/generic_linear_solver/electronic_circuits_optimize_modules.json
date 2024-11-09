@@ -1,0 +1,27 @@
+{
+    "data": "data/space-age-2.0.11.json",
+    "quality_module_tier": 2,
+    "quality_module_quality_level": 4,
+    "prod_module_tier": 2,
+    "prod_module_quality_level": 4,
+    "max_quality_unlocked": 4,
+    "items": ["electronic-circuit", "copper-cable", "iron-plate", "copper-plate", "iron-ore", "copper-ore"],
+    "module_cost": 1.0,
+    "inputs": [
+        {
+            "item_id": "normal__iron-ore",
+            "cost": 0.0
+        },
+        {
+            "item_id": "normal__copper-ore",
+            "cost": 0.0
+        }
+    ],
+    "byproducts": [],
+    "outputs": [
+        {
+            "item_id": "legendary__electronic-circuit",
+            "amount": 1.0
+        }
+    ]
+}

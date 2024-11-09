@@ -24,6 +24,18 @@ PROD_BONUSES = [
 
 PROD_SPEED_PENALTIES = [-0.05, -0.1, -0.15]
 
+def calculate_expected_amount(result_data, prod_bonus):
+    # see here: https://lua-api.factorio.com/latest/types/ItemProductPrototype.html
+    base_amount = result_data['amount'] if 'amount' in result_data.keys() \
+        else 0.5 * (result_data['amount_min'] + result_data['amount_max'])
+    probabiity_factor = result_data['probability'] if 'probability' in result_data.keys() else 1.0
+    ignored_by_productivity = result_data['ignored_by_productivity'] if 'ignored_by_productivity' in result_data.keys() else 0.0
+    extra_count_fraction = result_data['extra_count_fraction'] if 'extra_count_fraction' in result_data.keys() else 0.0
+
+    base_amount_after_prod = ignored_by_productivity + (base_amount - ignored_by_productivity) * (1.0 + prod_bonus)
+    amount_after_probabilities = base_amount_after_prod * probabiity_factor * (1.0 + extra_count_fraction)
+    return amount_after_probabilities
+
 def calculate_quality_probability_factor(starting_quality, ending_quality, max_quality_unlocked, quality_percent):
     if (starting_quality > max_quality_unlocked):
         raise ValueError('Starting quality cannot be above max quality unlocked')
@@ -56,12 +68,8 @@ def calculate_quality_probability_factor(starting_quality, ending_quality, max_q
         print(f'max_quality_unlocked: {max_quality_unlocked}')
         raise RuntimeError('Reached impossible condition in calculate_quality_probability_factor')
 
-def calculate_craft_amount(ingredient_quality, product_quality, max_quality_unlocked, quality_percent, prod_bonus):
-    # going from ingredient -> product
-    return calculate_quality_probability_factor(ingredient_quality, product_quality, max_quality_unlocked, quality_percent) * (1 + prod_bonus)
-
-def get_recipe_id(recipe_key, quality, num_qual_modules, num_prod_modules):
-    return f'{QUALITY_NAMES[quality]}__{recipe_key}__{num_qual_modules}-qual__{num_prod_modules}-prod'
+def get_recipe_id(recipe_key, quality, crafting_machine_key, num_qual_modules, num_prod_modules):
+    return f'{QUALITY_NAMES[quality]}__{recipe_key}__{crafting_machine_key}__{num_qual_modules}-qual__{num_prod_modules}-prod'
 
 def get_item_id(item_name, quality):
     return f'{QUALITY_NAMES[quality]}__{item_name}'
@@ -96,8 +104,6 @@ class QualityLinearSolver:
         self.byproducts = config['byproducts']
         self.outputs = config['outputs']
 
-        self.recipe_vars = config['recipe_vars']
-
         self.crafting_machines = data['crafting_machines']
         self.recipes = data['recipes']
 
@@ -130,6 +136,7 @@ class QualityLinearSolver:
         results = recipe_data['results']
         energy_required = recipe_data['energy_required']
 
+        crafting_machine_key = crafting_machine_data['key']
         crafting_machine_speed = crafting_machine_data['crafting_speed']
         crafting_machine_module_slots = crafting_machine_data['module_slots']
         crafting_machine_prod_bonus = crafting_machine_data['prod_bonus']
@@ -142,12 +149,12 @@ class QualityLinearSolver:
             else:
                 num_prod_modules = 0
 
-            prod_factor = 1 + num_prod_modules * self.prod_module_bonus + crafting_machine_prod_bonus
+            prod_bonus = num_prod_modules * self.prod_module_bonus + crafting_machine_prod_bonus
             speed_factor = crafting_machine_speed * (1 - (num_qual_modules * self.quality_speed_penalty + num_prod_modules * self.prod_speed_penalty))
 
             # we want recipe_var to represent the number of buildings when all is finished
             # that way (recipe_var * module_cost) accurately represents the number of modules used per recipe
-            recipe_id = get_recipe_id(recipe_key=recipe_key, quality=recipe_quality, num_prod_modules=num_prod_modules, num_qual_modules=num_qual_modules)
+            recipe_id = get_recipe_id(recipe_key=recipe_key, quality=recipe_quality, crafting_machine_key=crafting_machine_key, num_prod_modules=num_prod_modules, num_qual_modules=num_qual_modules)
             recipe_var = self.solver.NumVar(0, self.solver.infinity(), name=recipe_id)
             self.solver_recipes[recipe_id] = recipe_var
             self.num_modules_var += recipe_var
@@ -161,19 +168,44 @@ class QualityLinearSolver:
                 # negative because it is consumed
                 self.solver_items[ingredient_item_id].append( (-1) * ingredient_amount_per_second_per_building * recipe_var)
                 if self.verbose:
-                    print(f'recipe {recipe_id} consumes {ingredient["amount"]} {ingredient_item_id}')
+                    print(f'recipe {recipe_id} consumes {ingredient_amount_per_second_per_building} {ingredient_item_id}')
             # ingredient qualities can produce all possible higher qualities
             result_qualities = list(range(recipe_quality, self.max_quality_unlocked+1))
-            for result, result_quality in itertools.product(results, result_qualities):
-                result_item_id = get_item_id(result['name'], result_quality)
+            for result_data, result_quality in itertools.product(results, result_qualities):
+                result_item_id = get_item_id(result_data['name'], result_quality)
+
+                expected_amount = calculate_expected_amount(result_data, prod_bonus)
 
                 quality_percent = num_qual_modules * self.quality_module_probability
                 quality_probability_factor = calculate_quality_probability_factor(recipe_quality, result_quality, self.max_quality_unlocked, quality_percent)
-                result_amount_per_second_per_building = result['amount'] * speed_factor * quality_probability_factor * prod_factor / energy_required
+                result_amount_per_second_per_building = expected_amount * speed_factor * quality_probability_factor / energy_required
 
                 self.solver_items[result_item_id].append(result_amount_per_second_per_building * recipe_var)
                 if self.verbose:
                     print(f'recipe {recipe_id} produces {result_amount_per_second_per_building} {result_item_id}')
+
+    def include_recipe(self, recipe_data):
+        for ingredient in recipe_data['ingredients']:
+            if ingredient['name'] not in self.items:
+                return False
+        for result in recipe_data['results']:
+            if result['name'] not in self.items:
+                return False
+        return True
+
+    def get_best_crafting_machine(self, recipe_data):
+        recipe_category = recipe_data['category']
+        allowed_crafting_machines = [c for c in self.crafting_machines if recipe_category in c['crafting_categories']]
+        max_module_slots = max(c['module_slots'] for c in allowed_crafting_machines)
+        max_prod_bonus = max(c['prod_bonus'] for c in allowed_crafting_machines)
+        max_crafting_speed = max(c['crafting_speed'] for c in allowed_crafting_machines)
+        best_crafting_machine = [c for c in allowed_crafting_machines if \
+                (c['module_slots'] == max_module_slots) and \
+                (c['prod_bonus'] == max_prod_bonus) and \
+                (c['crafting_speed'] == max_crafting_speed)]
+        if len(best_crafting_machine) != 1:
+            raise RuntimeError('Unable to disambiguate best crafting machine')
+        return best_crafting_machine[0]
 
     def run(self):
         self.num_modules_var = self.solver.NumVar(0, self.solver.infinity(), name='num-modules')
@@ -182,12 +214,11 @@ class QualityLinearSolver:
         for item in self.items:
             self.setup_item(item)
 
-        for recipe_var in self.recipe_vars:
-            crafting_machine_key = recipe_var['crafting_machine']
-            recipe_key = recipe_var['recipe']
-            crafting_machine_data = [c for c in self.crafting_machines if c['key']==crafting_machine_key][0]
-            recipe_data = [r for r in self.recipes if r['key']==recipe_key][0]
-            self.setup_recipe_var(recipe_data, crafting_machine_data)
+        for recipe_data in self.recipes:
+            if self.include_recipe(recipe_data):
+                recipe_key = recipe_data['key']
+                crafting_machine_data = self.get_best_crafting_machine(recipe_data)
+                self.setup_recipe_var(recipe_data, crafting_machine_data)
 
         for input in self.inputs:
             # Create variable for free production of input
@@ -233,7 +264,7 @@ class QualityLinearSolver:
             print('')
             print('Recipes used:')
             for recipe_var in self.solver_recipes.values():
-                if(recipe_var.solution_value()>0):
+                if(recipe_var.solution_value()>1e-9):
                     print(f'{recipe_var.name()}: {recipe_var.solution_value()}')
             print('')
             print(f'Modules used: {self.num_modules_var.solution_value()}')
