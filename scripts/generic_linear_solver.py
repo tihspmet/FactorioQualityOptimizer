@@ -77,7 +77,7 @@ def get_output_id(item_id):
 
 class QualityLinearSolver:
 
-    def __init__(self, config, verbose=False):
+    def __init__(self, config, data, verbose=False):
         quality_module_tier = config['quality_module_tier']
         quality_module_quality_level = config['quality_module_quality_level']
         self.quality_module_probability = QUALITY_PROBABILITIES[quality_module_tier][quality_module_quality_level]
@@ -97,8 +97,9 @@ class QualityLinearSolver:
         self.outputs = config['outputs']
 
         self.recipe_vars = config['recipe_vars']
-        self.crafting_machines = config['crafting_machines']
-        self.recipes = config['recipes']
+
+        self.crafting_machines = data['crafting_machines']
+        self.recipes = data['recipes']
 
         # keys are '{quality_name}__{item_name}', values are lists of solver variables
         # mostly [(recipe)*(amount)]'s) that get summed to a constraint (i.e. zero)
@@ -251,9 +252,14 @@ def main():
     parser.add_argument('-c', '--config', type=str, default=default_config_path, help='Config file. Defaults to \'examples/one_step_example.json\'.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode. Prints out item and recipe information during setup.')
     args = parser.parse_args()
+
     with open(args.config) as f:
         config = json.load(f)
-    solver = QualityLinearSolver(config=config, verbose=args.verbose)
+
+    with open(os.path.join(codebase_path, config['data'])) as f:
+        data = json.load(f)
+
+    solver = QualityLinearSolver(config=config, data=data, verbose=args.verbose)
     solver.run()
 
 if __name__=='__main__':

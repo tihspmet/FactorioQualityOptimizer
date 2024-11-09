@@ -1,4 +1,5 @@
 {
+    "data": "data/test-data.json",
     "quality_module_tier": 2,
     "quality_module_quality_level": 4,
     "prod_module_tier": 2,
@@ -27,56 +28,6 @@
         {
             "crafting_machine": "recycler",
             "recipe": "recycle-2-to-1"
-        }
-    ],
-    "crafting_machines": [
-        {
-            "key": "assembling-machine-3",
-            "crafting_speed": 1.25,
-            "module_slots": 4,
-            "prod_bonus": 0
-        },
-        {
-            "key": "recycler",
-            "crafting_speed": 0.5,
-            "module_slots": 4,
-            "prod_bonus": 0
-        }
-    ],
-    "recipes": [
-        {
-            "key": "craft-1-to-2",
-            "allow_productivity": true,
-            "energy_required": 1,
-            "ingredients": [
-                {
-                    "name": "item-1",
-                    "amount": 1.0
-                }
-            ],
-            "results": [
-                {
-                    "name": "item-2",
-                    "amount": 1.0
-                }
-            ]
-        },
-        {
-            "key": "recycle-2-to-1",
-            "allow_productivity": false,
-            "energy_required": 0.25,
-            "ingredients": [
-                {
-                    "name": "item-2",
-                    "amount": 1.0
-                }
-            ],
-            "results": [
-                {
-                    "name": "item-1",
-                    "amount": 0.25
-                }
-            ]
         }
     ]
 }
