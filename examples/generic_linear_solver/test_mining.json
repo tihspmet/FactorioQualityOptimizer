@@ -11,16 +11,12 @@
         {
             "item_id": "normal__iron-ore-resource",
             "cost": 1.0
-        },
-        {
-            "item_id": "normal__copper-ore-resource",
-            "cost": 1.0
         }
     ],
     "byproducts": [],
     "outputs": [
         {
-            "item_id": "legendary__electronic-circuit",
+            "item_id": "legendary__iron-plate",
             "amount": 1.0
         }
     ]

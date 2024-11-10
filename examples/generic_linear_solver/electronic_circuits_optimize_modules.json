@@ -9,11 +9,11 @@
     "disallowed_crafting_machines": [],
     "inputs": [
         {
-            "item_id": "normal__iron-ore",
+            "item_id": "normal__iron-ore-resource",
             "cost": 0.0
         },
         {
-            "item_id": "normal__copper-ore",
+            "item_id": "normal__copper-ore-resource",
             "cost": 0.0
         }
     ],

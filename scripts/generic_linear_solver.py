@@ -5,6 +5,8 @@ import os
 from collections import defaultdict
 from ortools.linear_solver import pywraplp
 
+DEFAULT_RESOURCE_CATEGORY = 'basic-solid'
+
 JUMP_QUALITY_PROBABILITY = 0.1
 QUALITY_NAMES = ['normal', 'uncommon', 'rare', 'epic', 'legendary']
 
@@ -105,6 +107,8 @@ class QualityLinearSolver:
         self.outputs = config['outputs']
 
         # change to dict for faster lookup
+        self.resources = { resource_data['key']: resource_data for resource_data in data['resources'] }
+        self.mining_drills = { mining_drill_data['key']: mining_drill_data for mining_drill_data in data['mining_drills'] }
         self.items = { item_data['key']: item_data for item_data in data['items']}
         self.crafting_machines = { crafting_machine_data['key']: crafting_machine_data for crafting_machine_data in data['crafting_machines'] }
         self.recipes = { recipe_data['key']: recipe_data for recipe_data in data['recipes']}
@@ -147,6 +151,48 @@ class QualityLinearSolver:
         self.solver = pywraplp.Solver.CreateSolver("GLOP")
         if not self.solver:
             raise RuntimeError('error setting up solver')
+
+    def setup_resource(self, resource_data):
+        resource_key = resource_data['key']
+        mock_item_key = f'{resource_key}-resource'
+        mock_recipe_key = f'{resource_key}-from-resource'
+        ingredients = [{ 'name': mock_item_key, 'amount': 1 }]
+        if 'required_fluid' in resource_data.keys():
+            ingredients.append({ 'name': resource_data['required_fluid'], 'amount': resource_data['fluid_amount'] })
+        mock_item_data = {
+            'key': mock_item_key,
+            'allows_quality': False,
+            'qualities': [0],
+        }
+        mock_recipe_data = {
+            'key': mock_recipe_key,
+            # technically productivity modules can be used in mining to reduce resource drain
+            # in practice I don't think I would care about this and instead prefer qual modules
+            'allow_productivity': False,
+            'ingredients': ingredients,
+            'results': resource_data['results'],
+            'energy_required': resource_data['mining_time'],
+            'category': resource_data['category'] if 'category' in resource_data.keys() else DEFAULT_RESOURCE_CATEGORY,
+            'allows_quality': False,
+            'qualities': [0]
+        }
+        self.items[mock_item_key] = mock_item_data
+        self.recipes[mock_recipe_key] = mock_recipe_data
+
+    def setup_mining_drill(self, mining_drill_data):
+        key = mining_drill_data['key']
+        mock_crafting_machine_data = {
+            'key': key,
+            'module_slots': mining_drill_data['module_slots'],
+            'crafting_speed': mining_drill_data['mining_speed'],
+            'crafting_categories': mining_drill_data['resource_categories'],
+            # technically big mining drills have less resource drain (and an effective resource prod bonus)
+            # but I don't see this is in the json file.
+            # I think this is unlikely to affect overall results (i.e. prod/qual ratios)
+            # would only affect cost function of "xxx-ore-resource"
+            'prod_bonus': 0.0
+        }
+        self.crafting_machines[key] = mock_crafting_machine_data
 
     def setup_item(self, item_data):
         item_key = item_data['key']
@@ -244,6 +290,12 @@ class QualityLinearSolver:
 
     def run(self):
         self.num_modules_var = self.solver.NumVar(0, self.solver.infinity(), name='num-modules')
+
+        for resource_data in self.resources.values():
+            self.setup_resource(resource_data)
+
+        for mining_drill_data in self.mining_drills.values():
+            self.setup_mining_drill(mining_drill_data)
 
         # needs to happen first as setup_recipe depends on self.items being initialized
         for item_data in self.items.values():
