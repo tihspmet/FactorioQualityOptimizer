@@ -15,6 +15,16 @@
             "prod_bonus": 0
         }
     ],
+    "items": [
+        {
+            "key": "item-1",
+            "type": "item"
+        },
+        {
+            "key": "item-2",
+            "type": "item"
+        }
+    ],
     "recipes": [
         {
             "key": "craft-1-to-2",

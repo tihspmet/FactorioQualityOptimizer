@@ -5,7 +5,6 @@
     "prod_module_tier": 2,
     "prod_module_quality_level": 4,
     "max_quality_unlocked": 4,
-    "items": ["item-1", "item-2"],
     "module_cost": 1.0,
     "inputs": [
         {
@@ -18,16 +17,6 @@
         {
             "item_id": "legendary__item-2",
             "amount": 1.0
-        }
-    ],
-    "recipe_vars": [
-        {
-            "crafting_machine": "assembling-machine-3",
-            "recipe": "craft-1-to-2"
-        },
-        {
-            "crafting_machine": "recycler",
-            "recipe": "recycle-2-to-1"
         }
     ]
 }
