@@ -5,18 +5,18 @@
     "prod_module_tier": 2,
     "prod_module_quality_level": 4,
     "max_quality_unlocked": 4,
-    "module_cost": 1.0,
+    "module_cost": 0.0,
     "disallowed_crafting_machines": [],
     "inputs": [
         {
-            "item_id": "normal__item-1",
-            "cost": 0.0
+            "item_id": "normal__test-fluid",
+            "cost": 1.0
         }
     ],
     "byproducts": [],
     "outputs": [
         {
-            "item_id": "legendary__item-2",
+            "item_id": "legendary__item-from-fluid",
             "amount": 1.0
         }
     ]

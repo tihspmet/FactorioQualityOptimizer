@@ -23,9 +23,54 @@
         {
             "key": "item-2",
             "type": "item"
+        },
+        {
+            "key": "test-fluid",
+            "type": "fluid"
+        },
+        {
+            "key": "item-from-fluid",
+            "type": "item"
         }
     ],
     "recipes": [
+        {
+            "key": "craft-item-from-fluid",
+            "category": "crafting",
+            "allow_productivity": true,
+            "energy_required": 1,
+            "ingredients": [
+                {
+                    "name": "test-fluid",
+                    "amount": 1.0
+                }
+            ],
+            "results": [
+                {
+                    "name": "item-from-fluid",
+                    "amount": 1.0
+                }
+            ]
+        },
+        {
+            "key": "recycle-item-from-fluid",
+            "category": "recycling",
+            "allow_productivity": false,
+            "energy_required": 0.25,
+            "ingredients": [
+                {
+                    "name": "item-from-fluid",
+                    "amount": 1.0
+                }
+            ],
+            "results": [
+                {
+                    "name": "item-from-fluid",
+                    "amount": 0.25
+                }
+            ]
+        },
+
         {
             "key": "craft-1-to-2",
             "category": "crafting",

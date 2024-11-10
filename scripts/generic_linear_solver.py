@@ -97,15 +97,39 @@ class QualityLinearSolver:
         self.quality_speed_penalty = QUALITY_SPEED_PENALTIES[quality_module_tier]
         self.prod_speed_penalty = PROD_SPEED_PENALTIES[prod_module_tier]
 
+        self.disallowed_crafting_machines = config['disallowed_crafting_machines']
         self.max_quality_unlocked = config['max_quality_unlocked']
         self.module_cost = config['module_cost']
         self.inputs = config['inputs']
         self.byproducts = config['byproducts']
         self.outputs = config['outputs']
 
-        self.items = data['items']
-        self.crafting_machines = data['crafting_machines']
-        self.recipes = data['recipes']
+        # change to dict for faster lookup
+        self.items = { item_data['key']: item_data for item_data in data['items']}
+        self.crafting_machines = { crafting_machine_data['key']: crafting_machine_data for crafting_machine_data in data['crafting_machines'] }
+        self.recipes = { recipe_data['key']: recipe_data for recipe_data in data['recipes']}
+
+        for item_key, item_data in self.items.items():
+            item_allows_quality = item_data['type'] != 'fluid'
+            item_data['allows_quality'] = item_allows_quality
+            item_data['qualities'] = list(range(self.max_quality_unlocked+1)) if item_allows_quality else [0]
+
+        # don't loop the list itself since we delete elements from it
+        recipe_keys = list(self.recipes.keys())
+        for recipe_key in recipe_keys:
+            # note that some recipes have no ingredients
+            recipe_allows_quality = False
+            recipe_data = self.recipes[recipe_key]
+            for ingredient in recipe_data['ingredients']:
+                if ingredient['name'] not in self.items.keys():
+                    print(f'IGNORING RECIPE {recipe_data["key"]}, {ingredient["name"]} NOT FOUND IN ITEMS LIST')
+                    # there are a handful of "nonsense-recipes" in the data file with items that don't exist (red wire recycling, etc)
+                    del self.recipes[recipe_key]
+                else:
+                    if self.items[ingredient['name']]['allows_quality']:
+                        recipe_allows_quality = True
+            recipe_data['allows_quality'] = recipe_allows_quality
+            recipe_data['qualities'] = list(range(self.max_quality_unlocked+1)) if recipe_allows_quality else [0]
 
         # keys are '{quality_name}__{item_name}', values are lists of solver variables
         # mostly [(recipe)*(amount)]'s) that get summed to a constraint (i.e. zero)
@@ -126,7 +150,7 @@ class QualityLinearSolver:
 
     def setup_item(self, item_data):
         item_key = item_data['key']
-        for quality in range(self.max_quality_unlocked+1):
+        for quality in item_data['qualities']:
             item_id = get_item_id(item_key, quality)
             self.solver_items[item_id] = []
 
@@ -142,24 +166,10 @@ class QualityLinearSolver:
         crafting_machine_module_slots = crafting_machine_data['module_slots']
         crafting_machine_prod_bonus = crafting_machine_data['prod_bonus']
 
-        recipe_qualities = list(range(self.max_quality_unlocked+1))
-        num_qual_modules = list(range(crafting_machine_module_slots+1))
+        recipe_qualities = recipe_data['qualities']
+        num_possible_qual_modules = list(range(crafting_machine_module_slots+1))
 
-        # the space age data file has some bad recipes in it
-        # like copper-wire, red-wire, and green-wire recycling recipes
-        # despite these not existing in the items list
-        for ingredient in ingredients:
-            test_item_id = get_item_id(ingredient['name'], self.max_quality_unlocked)
-            if test_item_id not in self.solver_items.keys():
-                print(f'BAD RECIPE {recipe_key}, INGREDIENT {ingredient["name"]} NOT FOUND IN ITEMS LIST')
-                return
-        for result in results:
-            test_item_id = get_item_id(result['name'], self.max_quality_unlocked)
-            if test_item_id not in self.solver_items.keys():
-                print(f'BAD RECIPE {recipe_key}, RESULT {result["name"]} NOT FOUND IN ITEMS LIST')
-                return
-
-        for recipe_quality, num_qual_modules in itertools.product(recipe_qualities, num_qual_modules):
+        for recipe_quality, num_qual_modules in itertools.product(recipe_qualities, num_possible_qual_modules):
             if allow_productivity:
                 num_prod_modules = crafting_machine_module_slots - num_qual_modules
             else:
@@ -176,8 +186,10 @@ class QualityLinearSolver:
             self.num_modules_var += recipe_var
 
             for ingredient in ingredients:
+                ingredient_item_data = self.items[ingredient['name']]
+                ingredient_quality = recipe_quality if ingredient_item_data['allows_quality'] else 0
+                ingredient_item_id = get_item_id(ingredient['name'], ingredient_quality)
                 # ingredient quality is same as recipe quality
-                ingredient_item_id = get_item_id(ingredient['name'], recipe_quality)
 
                 ingredient_amount_per_second_per_building = ingredient['amount'] * speed_factor / energy_required
 
@@ -186,23 +198,33 @@ class QualityLinearSolver:
                 if self.verbose:
                     print(f'recipe {recipe_id} consumes {ingredient_amount_per_second_per_building} {ingredient_item_id}')
             # ingredient qualities can produce all possible higher qualities
-            result_qualities = list(range(recipe_quality, self.max_quality_unlocked+1))
-            for result_data, result_quality in itertools.product(results, result_qualities):
-                result_item_id = get_item_id(result_data['name'], result_quality)
+            for result_data in results:
+                result_item_data = self.items[result_data['name']]
+                result_qualities = result_item_data['qualities']
+                if result_item_data['allows_quality']:
+                    result_qualities = [quality for quality in result_qualities if quality >= recipe_quality]
 
-                expected_amount = calculate_expected_amount(result_data, prod_bonus)
+                for result_quality in result_qualities:
+                    result_item_id = get_item_id(result_data['name'], result_quality)
 
-                quality_percent = num_qual_modules * self.quality_module_probability
-                quality_probability_factor = calculate_quality_probability_factor(recipe_quality, result_quality, self.max_quality_unlocked, quality_percent)
-                result_amount_per_second_per_building = expected_amount * speed_factor * quality_probability_factor / energy_required
+                    expected_amount = calculate_expected_amount(result_data, prod_bonus)
 
-                self.solver_items[result_item_id].append(result_amount_per_second_per_building * recipe_var)
-                if self.verbose:
-                    print(f'recipe {recipe_id} produces {result_amount_per_second_per_building} {result_item_id}')
+                    if result_item_data['allows_quality']:
+                        quality_percent = num_qual_modules * self.quality_module_probability
+                        quality_probability_factor = calculate_quality_probability_factor(recipe_quality, result_quality, self.max_quality_unlocked, quality_percent)
+                    else:
+                        quality_probability_factor = 1.0
+                    result_amount_per_second_per_building = expected_amount * speed_factor * quality_probability_factor / energy_required
+
+                    self.solver_items[result_item_id].append(result_amount_per_second_per_building * recipe_var)
+                    if self.verbose:
+                        print(f'recipe {recipe_id} produces {result_amount_per_second_per_building} {result_item_id}')
 
     def get_best_crafting_machine(self, recipe_data):
         recipe_category = recipe_data['category']
-        allowed_crafting_machines = [c for c in self.crafting_machines if recipe_category in c['crafting_categories']]
+        allowed_crafting_machines = [c for c in self.crafting_machines.values() \
+            if recipe_category in c['crafting_categories'] \
+                and c['key'] not in self.disallowed_crafting_machines]
 
         # seems to only affect rocket-parts/rocket-silo, fix this later
         if len(allowed_crafting_machines)==0:
@@ -224,10 +246,10 @@ class QualityLinearSolver:
         self.num_modules_var = self.solver.NumVar(0, self.solver.infinity(), name='num-modules')
 
         # needs to happen first as setup_recipe depends on self.items being initialized
-        for item in self.items:
-            self.setup_item(item)
+        for item_data in self.items.values():
+            self.setup_item(item_data)
 
-        for recipe_data in self.recipes:
+        for recipe_data in self.recipes.values():
             recipe_key = recipe_data['key']
             crafting_machine_data = self.get_best_crafting_machine(recipe_data)
             if crafting_machine_data is not None:

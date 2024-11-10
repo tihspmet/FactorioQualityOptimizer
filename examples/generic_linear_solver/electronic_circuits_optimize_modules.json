@@ -6,6 +6,7 @@
     "prod_module_quality_level": 4,
     "max_quality_unlocked": 4,
     "module_cost": 1.0,
+    "disallowed_crafting_machines": [],
     "inputs": [
         {
             "item_id": "normal__iron-ore",
