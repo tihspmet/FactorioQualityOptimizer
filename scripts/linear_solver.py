@@ -109,6 +109,7 @@ class LinearSolver:
 
     def __init__(self, config, output_filename=None, verbose=False):
         self.output_filename = output_filename
+        self.verbose = verbose
 
         quality_module_tier = config['quality_module_tier']
         quality_module_quality_level = QUALITY_LEVELS[config['quality_module_quality']]
@@ -121,7 +122,12 @@ class LinearSolver:
         self.quality_speed_penalty = QUALITY_SPEED_PENALTIES[quality_module_tier-1]
         self.prod_speed_penalty = PROD_SPEED_PENALTIES[prod_module_tier-1]
 
-        self.disallowed_crafting_machines = config['disallowed_crafting_machines']
+        self.allowed_recipes = config['allowed_recipes'] if 'allowed_recipes' in config else None
+        self.disallowed_recipes = config['disallowed_recipes'] if 'disallowed_recipes' in config else None
+
+        self.allowed_crafting_machines = config['allowed_crafting_machines'] if 'allowed_crafting_machines' in config else None
+        self.disallowed_crafting_machines = config['disallowed_crafting_machines'] if 'disallowed_crafting_machines' in config else None
+
         self.max_quality_unlocked = QUALITY_LEVELS[config['max_quality_unlocked']]
         self.module_cost = config['module_cost']
         self.inputs = config['inputs']
@@ -150,7 +156,8 @@ class LinearSolver:
             recipe_data = self.recipes[recipe_key]
             for ingredient in recipe_data['ingredients']:
                 if ingredient['name'] not in self.items.keys():
-                    print(f'IGNORING RECIPE {recipe_data["key"]}, {ingredient["name"]} NOT FOUND IN ITEMS LIST')
+                    if self.verbose:
+                        print(f'IGNORING RECIPE {recipe_data["key"]}, {ingredient["name"]} NOT FOUND IN ITEMS LIST')
                     # there are a handful of "nonsense-recipes" in the data file with items that don't exist (red wire recycling, etc)
                     del self.recipes[recipe_key]
                 else:
@@ -171,10 +178,29 @@ class LinearSolver:
         self.solver_outputs = {}
         self.num_modules_var = None
         self.solver_costs = []
-        self.verbose = verbose
         self.solver = pywraplp.Solver.CreateSolver("GLOP")
         if not self.solver:
             raise RuntimeError('error setting up solver')
+
+    def recipe_is_allowed(self, recipe_key):
+        if (self.allowed_recipes is not None) and (self.disallowed_recipes is not None):
+            raise RuntimeError('Illegal configuration. Cannot set both allowed_recipes and disallowed_recipes.')
+        if self.allowed_recipes is not None:
+            return (recipe_key in self.allowed_recipes)
+        elif self.disallowed_recipes is not None:
+            return (recipe_key not in self.allowed_recipes)
+        else:
+            return True
+
+    def crafting_machine_is_allowed(self, crafting_machine_key):
+        if (self.allowed_crafting_machines is not None) and (self.disallowed_crafting_machines is not None):
+            raise RuntimeError('Illegal configuration. Cannot set both allowed_crafting_machines and disallowed_crafting_machines.')
+        if self.allowed_crafting_machines is not None:
+            return (crafting_machine_key in self.allowed_crafting_machines)
+        elif self.disallowed_crafting_machines is not None:
+            return (crafting_machine_key not in self.disallowed_crafting_machines)
+        else:
+            return True
 
     def setup_resource(self, resource_data):
         item_key = resource_data['key']
@@ -292,13 +318,15 @@ class LinearSolver:
 
     def get_best_crafting_machine(self, recipe_data):
         recipe_category = recipe_data['category']
-        allowed_crafting_machines = [c for c in self.crafting_machines.values() \
-            if recipe_category in c['crafting_categories'] \
-                and c['key'] not in self.disallowed_crafting_machines]
+        allowed_crafting_machines = []
+        for crafting_machine in self.crafting_machines.values():
+            if self.crafting_machine_is_allowed(crafting_machine['key']) and (recipe_category in crafting_machine['crafting_categories']):
+                allowed_crafting_machines.append(crafting_machine)
 
         # seems to only affect rocket-parts/rocket-silo, fix this later
         if len(allowed_crafting_machines)==0:
-            print(f'BAD RECIPE {recipe_data["key"]}, NO CRAFTING MACHINES FOUND')
+            if self.verbose:
+                print(f'BAD RECIPE {recipe_data["key"]}, NO CRAFTING MACHINES FOUND')
             return None
 
         max_module_slots = max(c['module_slots'] for c in allowed_crafting_machines)
@@ -327,9 +355,10 @@ class LinearSolver:
 
         for recipe_data in self.recipes.values():
             recipe_key = recipe_data['key']
-            crafting_machine_data = self.get_best_crafting_machine(recipe_data)
-            if crafting_machine_data is not None:
-                self.setup_recipe_var(recipe_data, crafting_machine_data)
+            if self.recipe_is_allowed(recipe_key):
+                crafting_machine_data = self.get_best_crafting_machine(recipe_data)
+                if crafting_machine_data is not None:
+                    self.setup_recipe_var(recipe_data, crafting_machine_data)
 
         for input in self.inputs:
             # Create variable for free production of input
@@ -405,7 +434,7 @@ class LinearSolver:
 
 def main():
     codebase_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    default_config_path = os.path.join(codebase_path, 'examples', 'one_step_example.json')
+    default_config_path = os.path.join(codebase_path, 'examples', 'electronic_circuits.json')
 
     parser = argparse.ArgumentParser(
         prog='Linear Solver',
@@ -419,7 +448,7 @@ def main():
     with open(args.config) as f:
         config = json.load(f)
 
-    solver = LinearSolver(config=config, data=data, output_filename=args.output, verbose=args.verbose)
+    solver = LinearSolver(config=config, output_filename=args.output, verbose=args.verbose)
     solver.run()
 
 if __name__=='__main__':
