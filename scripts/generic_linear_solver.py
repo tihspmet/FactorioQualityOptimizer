@@ -2,6 +2,7 @@ import argparse
 import itertools
 import json
 import os
+import pandas as pd
 from collections import defaultdict
 from ortools.linear_solver import pywraplp
 
@@ -73,6 +74,16 @@ def calculate_quality_probability_factor(starting_quality, ending_quality, max_q
 def get_recipe_id(recipe_key, quality, crafting_machine_key, num_qual_modules, num_prod_modules):
     return f'{QUALITY_NAMES[quality]}__{recipe_key}__{crafting_machine_key}__{num_qual_modules}-qual__{num_prod_modules}-prod'
 
+def parse_recipe_id(recipe_id):
+    objs = recipe_id.split('__')
+    return {
+        'recipe_quality': objs[0],
+        'recipe_name': objs[1],
+        'machine': objs[2],
+        'num_qual_modules': objs[3].split('-')[0],
+        'num_prod_modules': objs[4].split('-')[0]
+    }
+
 def get_item_id(item_key, quality):
     return f'{QUALITY_NAMES[quality]}__{item_key}'
 
@@ -87,7 +98,9 @@ def get_output_id(item_id):
 
 class QualityLinearSolver:
 
-    def __init__(self, config, data, verbose=False):
+    def __init__(self, config, data, output_filename, verbose=False):
+        self.output_filename = output_filename
+
         quality_module_tier = config['quality_module_tier']
         quality_module_quality_level = config['quality_module_quality_level']
         self.quality_module_probability = QUALITY_PROBABILITIES[quality_module_tier][quality_module_quality_level]
@@ -356,6 +369,15 @@ class QualityLinearSolver:
             print('')
             print(f'Modules used: {self.num_modules_var.solution_value()}')
 
+            recipe_data = []
+            for recipe_var in self.solver_recipes.values():
+                if(recipe_var.solution_value()>1e-9):
+                    curr_recipe_data = parse_recipe_id(recipe_var.name())
+                    curr_recipe_data['num_buildings'] = recipe_var.solution_value()
+                    recipe_data.append(curr_recipe_data)
+            df = pd.DataFrame(columns=['recipe_name', 'recipe_quality', 'machine', 'num_qual_modules', 'num_prod_modules', 'num_buildings'], data=recipe_data)
+            df.to_csv(self.output_filename, index=False)
+
         else:
             print("The problem does not have an optimal solution.")
 
@@ -369,6 +391,7 @@ def main():
     )
     parser.add_argument('-c', '--config', type=str, default=default_config_path, help='Config file. Defaults to \'examples/one_step_example.json\'.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode. Prints out item and recipe information during setup.')
+    parser.add_argument('-o', '--output', type=str, default='solver_output.csv', help='Output file')
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -377,7 +400,7 @@ def main():
     with open(os.path.join(codebase_path, config['data'])) as f:
         data = json.load(f)
 
-    solver = QualityLinearSolver(config=config, data=data, verbose=args.verbose)
+    solver = QualityLinearSolver(config=config, data=data, output_filename=args.output, verbose=args.verbose)
     solver.run()
 
 if __name__=='__main__':
