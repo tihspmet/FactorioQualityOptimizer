@@ -1,22 +1,25 @@
 {
     "data": "data/test-data.json",
-    "quality_module_tier": 2,
-    "quality_module_quality_level": 4,
-    "prod_module_tier": 2,
-    "prod_module_quality_level": 4,
-    "max_quality_unlocked": 4,
+    "quality_module_tier": 3,
+    "quality_module_quality": "legendary",
+    "prod_module_tier": 3,
+    "prod_module_quality": "legendary",
+    "max_quality_unlocked": "legendary",
     "module_cost": 0.0,
     "disallowed_crafting_machines": [],
     "inputs": [
         {
-            "item_id": "normal__test-fluid",
+            "key": "test-fluid",
+            "quality": "normal",
+            "resource": false,
             "cost": 1.0
         }
     ],
     "byproducts": [],
     "outputs": [
         {
-            "item_id": "legendary__item-from-fluid",
+            "key": "item-from-fluid",
+            "quality": "legendary",
             "amount": 1.0
         }
     ]

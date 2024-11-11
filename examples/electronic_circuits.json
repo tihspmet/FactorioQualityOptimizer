@@ -5,11 +5,17 @@
     "prod_module_tier": 3,
     "prod_module_quality": "legendary",
     "max_quality_unlocked": "legendary",
-    "module_cost": 0.0,
+    "module_cost": 1.0,
     "disallowed_crafting_machines": [],
     "inputs": [
         {
             "key": "iron-ore",
+            "quality": "normal",
+            "resource": true,
+            "cost": 1.0
+        },
+        {
+            "key": "copper-ore",
             "quality": "normal",
             "resource": true,
             "cost": 1.0
@@ -18,7 +24,7 @@
     "byproducts": [],
     "outputs": [
         {
-            "key": "iron-plate",
+            "key": "electronic-circuit",
             "quality": "legendary",
             "amount": 1.0
         }

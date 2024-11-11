@@ -6,10 +6,13 @@ import pandas as pd
 from collections import defaultdict
 from ortools.linear_solver import pywraplp
 
+CODEBASE_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
 DEFAULT_RESOURCE_CATEGORY = 'basic-solid'
 
 JUMP_QUALITY_PROBABILITY = 0.1
 QUALITY_NAMES = ['normal', 'uncommon', 'rare', 'epic', 'legendary']
+QUALITY_LEVELS = { quality_name: quality_level for quality_level, quality_name in enumerate(QUALITY_NAMES) }
 
 QUALITY_PROBABILITIES = [
     [.01, .013, .016, .019, .025],
@@ -84,6 +87,12 @@ def parse_recipe_id(recipe_id):
         'num_prod_modules': objs[4].split('-')[0]
     }
 
+def get_resource_item_key(item_key):
+    return f'{item_key}-resource'
+
+def get_resource_recipe_key(item_key):
+    return f'{item_key}-mining'
+
 def get_item_id(item_key, quality):
     return f'{QUALITY_NAMES[quality]}__{item_key}'
 
@@ -96,30 +105,32 @@ def get_byproduct_id(item_id):
 def get_output_id(item_id):
     return f'output__{item_id}'
 
-class QualityLinearSolver:
+class LinearSolver:
 
-    def __init__(self, config, data, output_filename, verbose=False):
+    def __init__(self, config, output_filename=None, verbose=False):
         self.output_filename = output_filename
 
         quality_module_tier = config['quality_module_tier']
-        quality_module_quality_level = config['quality_module_quality_level']
-        self.quality_module_probability = QUALITY_PROBABILITIES[quality_module_tier][quality_module_quality_level]
+        quality_module_quality_level = QUALITY_LEVELS[config['quality_module_quality']]
+        self.quality_module_probability = QUALITY_PROBABILITIES[quality_module_tier-1][quality_module_quality_level]
 
         prod_module_tier = config['prod_module_tier']
-        prod_module_prod_level = config['prod_module_quality_level']
-        self.prod_module_bonus = PROD_BONUSES[prod_module_tier][prod_module_prod_level]
+        prod_module_quality_level = QUALITY_LEVELS[config['prod_module_quality']]
+        self.prod_module_bonus = PROD_BONUSES[prod_module_tier-1][prod_module_quality_level]
 
-        self.quality_speed_penalty = QUALITY_SPEED_PENALTIES[quality_module_tier]
-        self.prod_speed_penalty = PROD_SPEED_PENALTIES[prod_module_tier]
+        self.quality_speed_penalty = QUALITY_SPEED_PENALTIES[quality_module_tier-1]
+        self.prod_speed_penalty = PROD_SPEED_PENALTIES[prod_module_tier-1]
 
         self.disallowed_crafting_machines = config['disallowed_crafting_machines']
-        self.max_quality_unlocked = config['max_quality_unlocked']
+        self.max_quality_unlocked = QUALITY_LEVELS[config['max_quality_unlocked']]
         self.module_cost = config['module_cost']
         self.inputs = config['inputs']
         self.byproducts = config['byproducts']
         self.outputs = config['outputs']
 
-        # change to dict for faster lookup
+        with open(os.path.join(CODEBASE_PATH, config['data'])) as f:
+            data = json.load(f)
+
         self.resources = { resource_data['key']: resource_data for resource_data in data['resources'] }
         self.mining_drills = { mining_drill_data['key']: mining_drill_data for mining_drill_data in data['mining_drills'] }
         self.items = { item_data['key']: item_data for item_data in data['items']}
@@ -166,19 +177,19 @@ class QualityLinearSolver:
             raise RuntimeError('error setting up solver')
 
     def setup_resource(self, resource_data):
-        resource_key = resource_data['key']
-        mock_item_key = f'{resource_key}-resource'
-        mock_recipe_key = f'{resource_key}-from-resource'
-        ingredients = [{ 'name': mock_item_key, 'amount': 1 }]
+        item_key = resource_data['key']
+        resource_item_key = get_resource_item_key(item_key)
+        resource_recipe_key = get_resource_recipe_key(item_key)
+        ingredients = [{ 'name': resource_item_key, 'amount': 1 }]
         if 'required_fluid' in resource_data.keys():
             ingredients.append({ 'name': resource_data['required_fluid'], 'amount': resource_data['fluid_amount'] })
         mock_item_data = {
-            'key': mock_item_key,
+            'key': resource_item_key,
             'allows_quality': False,
             'qualities': [0],
         }
         mock_recipe_data = {
-            'key': mock_recipe_key,
+            'key': resource_recipe_key,
             # technically productivity modules can be used in mining to reduce resource drain
             # in practice I don't think I would care about this and instead prefer qual modules
             'allow_productivity': False,
@@ -189,8 +200,8 @@ class QualityLinearSolver:
             'allows_quality': False,
             'qualities': [0]
         }
-        self.items[mock_item_key] = mock_item_data
-        self.recipes[mock_recipe_key] = mock_recipe_data
+        self.items[resource_item_key] = mock_item_data
+        self.recipes[resource_recipe_key] = mock_recipe_data
 
     def setup_mining_drill(self, mining_drill_data):
         key = mining_drill_data['key']
@@ -322,7 +333,12 @@ class QualityLinearSolver:
 
         for input in self.inputs:
             # Create variable for free production of input
-            item_id = input['item_id']
+            if input['resource']:
+                input_item_key = get_resource_item_key(input['key'])
+            else:
+                input_item_key = input['key']
+            input_quality = QUALITY_LEVELS[input['quality']]
+            item_id = get_item_id(input_item_key, input_quality)
             cost = input['cost']
             input_id = get_input_id(item_id)
             solver_item_var = self.solver.NumVar(0, self.solver.infinity(), name=input_id)
@@ -338,7 +354,9 @@ class QualityLinearSolver:
             self.solver_items[item_id].append( (-1) * solver_item_var)
 
         for output in self.outputs:
-            item_id = output['item_id']
+            output_item_key = output['key']
+            output_quality = QUALITY_LEVELS[output['quality']]
+            item_id = get_item_id(output_item_key, output_quality)
             amount = output['amount']
             output_id = get_output_id(item_id)
             self.solver_items[item_id].append(-amount)
@@ -362,45 +380,45 @@ class QualityLinearSolver:
             for input_var in self.solver_inputs.values():
                 print(f'{input_var.name()}: {input_var.solution_value()}')
             print('')
+            print(f'Modules used: {self.num_modules_var.solution_value()}')
+            print('')
             print('Recipes used:')
             for recipe_var in self.solver_recipes.values():
                 if(recipe_var.solution_value()>1e-9):
                     print(f'{recipe_var.name()}: {recipe_var.solution_value()}')
-            print('')
-            print(f'Modules used: {self.num_modules_var.solution_value()}')
 
-            recipe_data = []
-            for recipe_var in self.solver_recipes.values():
-                if(recipe_var.solution_value()>1e-9):
-                    curr_recipe_data = parse_recipe_id(recipe_var.name())
-                    curr_recipe_data['num_buildings'] = recipe_var.solution_value()
-                    recipe_data.append(curr_recipe_data)
-            df = pd.DataFrame(columns=['recipe_name', 'recipe_quality', 'machine', 'num_qual_modules', 'num_prod_modules', 'num_buildings'], data=recipe_data)
-            df.to_csv(self.output_filename, index=False)
+            if self.output_filename is not None:
+                print('')
+                print(f'Writing output to: {self.output_filename}')
+                recipe_data = []
+                for recipe_var in self.solver_recipes.values():
+                    if(recipe_var.solution_value()>1e-9):
+                        curr_recipe_data = parse_recipe_id(recipe_var.name())
+                        curr_recipe_data['num_buildings'] = recipe_var.solution_value()
+                        recipe_data.append(curr_recipe_data)
+                df = pd.DataFrame(columns=['recipe_name', 'recipe_quality', 'machine', 'num_qual_modules', 'num_prod_modules', 'num_buildings'], data=recipe_data)
+                df.to_csv(self.output_filename, index=False)
 
         else:
             print("The problem does not have an optimal solution.")
 
 def main():
     codebase_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    default_config_path = os.path.join(codebase_path, 'examples', 'generic_linear_solver', 'one_step_example.json')
+    default_config_path = os.path.join(codebase_path, 'examples', 'one_step_example.json')
 
     parser = argparse.ArgumentParser(
-        prog='Generic Linear Solver',
+        prog='Linear Solver',
         description='This program optimizes prod/qual ratios in factories in order to minimize inputs needed for a given output',
     )
     parser.add_argument('-c', '--config', type=str, default=default_config_path, help='Config file. Defaults to \'examples/one_step_example.json\'.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode. Prints out item and recipe information during setup.')
-    parser.add_argument('-o', '--output', type=str, default='solver_output.csv', help='Output file')
+    parser.add_argument('-o', '--output', type=str, default=None, help='Output file')
     args = parser.parse_args()
 
     with open(args.config) as f:
         config = json.load(f)
 
-    with open(os.path.join(codebase_path, config['data'])) as f:
-        data = json.load(f)
-
-    solver = QualityLinearSolver(config=config, data=data, output_filename=args.output, verbose=args.verbose)
+    solver = LinearSolver(config=config, data=data, output_filename=args.output, verbose=args.verbose)
     solver.run()
 
 if __name__=='__main__':
