@@ -378,7 +378,8 @@ class LinearSolver:
             print('')
             print('Inputs used:')
             for input_var in self.solver_inputs.values():
-                print(f'{input_var.name()}: {input_var.solution_value()}')
+                if input_var.solution_value() > 1e-9:
+                    print(f'{input_var.name()}: {input_var.solution_value()}')
             print('')
             print(f'Modules used: {self.num_modules_var.solution_value()}')
             print('')
