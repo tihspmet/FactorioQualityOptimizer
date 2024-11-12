@@ -86,6 +86,7 @@ def main():
     parser.add_argument('-ii', '--input-items', metavar="", nargs='*', default=None, help='Custom input items to the solver. Should be phrased as item-1=cost-1 item-2=cost-2 ..., with no spaces around equals sign.')
     parser.add_argument('-iq', '--input-quality', default=DEFAULT_INPUT_QUALITY, help='Input quality to the solver. Only used if --input-items flag is set.')
     parser.add_argument('-ir', '--input-resources', metavar="", nargs='*', default=None, help='Custom input resources to the solver. Should be phrased as resource-1=cost-1 resource-2=cost-2 ..., with no spaces around equals sign. If not present, uses all resources on all planets. See data/space-age-2.0.11.json for resource keys.')
+    parser.add_argument('-av', '--allow-byproducts', action='store_true', help='Allows any item besides specified inputs or outputs to exist as a byproduct in the solution. Equivalent to adding void recipes. If not present, byproducts are recycled.')
     parser.add_argument('-ar', '--allowed-recipes', nargs='+', default=None, help='Allowed recipes. Only one of {--allowed-recipes} or {--disallowed-recipes} can be used. See data/space-age-2.0.11.json for recipe keys.')
     parser.add_argument('-dr', '--disallowed-recipes', nargs='+', default=None, help='Disallowed recipes. Only one of {--allowed-recipes} or {--disallowed-recipes} can be used. See data/space-age-2.0.11.json for recipe keys.')
     parser.add_argument('-ac', '--allowed-crafting-machines', nargs='*', type=str, help='Allowed crafting machines. Only one of {--allowed-crafting-machines} or {--disallowed-crafting-machines} can be used. See data/space-age-2.0.11.json for crafting machine keys. (default: None)')
@@ -109,13 +110,13 @@ def main():
         "prod_module_tier": args.prod_module_tier,
         "prod_module_quality": args.prod_module_quality or args.module_quality,
         "max_quality_unlocked": args.max_quality_unlocked,
+        "allow_byproducts": args.allow_byproducts,
         "module_cost": args.module_cost,
         "allowed_recipes": args.allowed_recipes if args.allowed_recipes else None,
         "disallowed_recipes": args.disallowed_recipes if args.disallowed_recipes else None,
         "allowed_crafting_machines": args.allowed_crafting_machines if args.allowed_crafting_machines else None,
         "disallowed_crafting_machines": args.disallowed_crafting_machines if args.disallowed_crafting_machines else None,
         "inputs": inputs,
-        "byproducts": [],
         "outputs": [
             {
                 "key": args.output_item,

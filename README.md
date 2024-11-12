@@ -127,10 +127,10 @@ There are four scripts in the `scripts` folder:
 To see a full list of command line args, we can run `python ./scripts/factorio_solver.py --help`:
 
 ```
-python ./scripts/factorio_solver.py --help
-usage: Factorio Solver [-h] [-oi OUTPUT_ITEM] [-oa OUTPUT_AMOUNT] [-oq OUTPUT_QUALITY] [-pt PROD_MODULE_TIER] [-qt QUALITY_MODULE_TIER] [-q MODULE_QUALITY] [-mq MAX_QUALITY_UNLOCKED] [-ii [...]]
-                       [-iq INPUT_QUALITY] [-ir [...]] [-ar ALLOWED_RECIPES [ALLOWED_RECIPES ...]] [-dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]] [-ac [ALLOWED_CRAFTING_MACHINES ...]]
-                       [-dc [DISALLOWED_CRAFTING_MACHINES ...]] [-rc RESOURCE_COST] [-oc OFFSHORE_COST] [-mc MODULE_COST] [-o OUTPUT] [-v]
+usage: Factorio Solver [-h] [-oi OUTPUT_ITEM] [-oa OUTPUT_AMOUNT] [-oq OUTPUT_QUALITY] [-pt PROD_MODULE_TIER] [-qt QUALITY_MODULE_TIER] [-q MODULE_QUALITY] [-pq PROD_MODULE_QUALITY]
+                       [-qq QUALITY_MODULE_QUALITY] [-mq MAX_QUALITY_UNLOCKED] [-ii [...]] [-iq INPUT_QUALITY] [-ir [...]] [-av] [-ar ALLOWED_RECIPES [ALLOWED_RECIPES ...]]
+                       [-dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]] [-ac [ALLOWED_CRAFTING_MACHINES ...]] [-dc [DISALLOWED_CRAFTING_MACHINES ...]] [-rc RESOURCE_COST] [-oc OFFSHORE_COST]
+                       [-mc MODULE_COST] [-o OUTPUT] [-v]
 
 This program optimizes prod/qual ratios in factories in order to optimize a given output
 
@@ -148,6 +148,10 @@ options:
                         Quality module tier (default: 3)
   -q MODULE_QUALITY, --module-quality MODULE_QUALITY
                         Module quality (default: legendary)
+  -pq PROD_MODULE_QUALITY, --prod-module-quality PROD_MODULE_QUALITY
+                        Production module quality, overrides --module-quality (default: None)
+  -qq QUALITY_MODULE_QUALITY, --quality-module-quality QUALITY_MODULE_QUALITY
+                        Quality module quality, overrides --module-quality (default: None)
   -mq MAX_QUALITY_UNLOCKED, --max-quality-unlocked MAX_QUALITY_UNLOCKED
                         Max quality unlocked (default: legendary)
   -ii [ ...], --input-items [ ...]
@@ -157,6 +161,9 @@ options:
   -ir [ ...], --input-resources [ ...]
                         Custom input resources to the solver. Should be phrased as resource-1=cost-1 resource-2=cost-2 ..., with no spaces around equals sign. If not present, uses all resources on all
                         planets. See data/space-age-2.0.11.json for resource keys. (default: None)
+  -av, --allow-byproducts
+                        Allows any item besides specified inputs or outputs to exist as a byproduct in the solution. Equivalent to adding void recipes. If not present, byproducts are recycled. (default:
+                        False)
   -ar ALLOWED_RECIPES [ALLOWED_RECIPES ...], --allowed-recipes ALLOWED_RECIPES [ALLOWED_RECIPES ...]
                         Allowed recipes. Only one of {--allowed-recipes} or {--disallowed-recipes} can be used. See data/space-age-2.0.11.json for recipe keys. (default: None)
   -dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...], --disallowed-recipes DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]
@@ -177,8 +184,6 @@ options:
                         Output results to csv (if present) (default: None)
   -v, --verbose         Verbose mode. Prints out item and recipe information during setup. (default: False)
 ```
-
-Have fun :)
 
 ### Linear Solver
 

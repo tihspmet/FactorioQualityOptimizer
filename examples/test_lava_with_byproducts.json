@@ -1,3 +1,4 @@
+
 {
     "data": "data/space-age-2.0.11.json",
     "quality_module_tier": 3,
@@ -6,16 +7,16 @@
     "prod_module_quality": "legendary",
     "max_quality_unlocked": "legendary",
     "module_cost": 1.0,
-    "disallowed_crafting_machines": [],
+    "allow_byproducts": true,
     "inputs": [
         {
-            "key": "iron-ore",
+            "key": "lava",
             "quality": "normal",
-            "resource": true,
-            "cost": 1.0
+            "resource": false,
+            "cost": 0.1
         },
         {
-            "key": "copper-ore",
+            "key": "calcite",
             "quality": "normal",
             "resource": true,
             "cost": 1.0
@@ -23,7 +24,7 @@
     ],
     "outputs": [
         {
-            "key": "electronic-circuit",
+            "key": "iron-plate",
             "quality": "legendary",
             "amount": 1.0
         }

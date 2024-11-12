@@ -122,6 +122,8 @@ class LinearSolver:
         self.quality_speed_penalty = QUALITY_SPEED_PENALTIES[quality_module_tier-1]
         self.prod_speed_penalty = PROD_SPEED_PENALTIES[prod_module_tier-1]
 
+        self.allow_byproducts = config['allow_byproducts'] if 'allow_byproducts' in config  else None
+
         self.allowed_recipes = config['allowed_recipes'] if 'allowed_recipes' in config else None
         self.disallowed_recipes = config['disallowed_recipes'] if 'disallowed_recipes' in config else None
 
@@ -131,7 +133,6 @@ class LinearSolver:
         self.max_quality_unlocked = QUALITY_LEVELS[config['max_quality_unlocked']]
         self.module_cost = config['module_cost']
         self.inputs = config['inputs']
-        self.byproducts = config['byproducts']
         self.outputs = config['outputs']
 
         with open(os.path.join(CODEBASE_PATH, config['data'])) as f:
@@ -270,6 +271,7 @@ class LinearSolver:
                 num_prod_modules = crafting_machine_module_slots - num_qual_modules
             else:
                 num_prod_modules = 0
+            num_modules = num_qual_modules + num_prod_modules
 
             prod_bonus = num_prod_modules * self.prod_module_bonus + crafting_machine_prod_bonus
             speed_factor = crafting_machine_speed * (1 - (num_qual_modules * self.quality_speed_penalty + num_prod_modules * self.prod_speed_penalty))
@@ -279,7 +281,8 @@ class LinearSolver:
             recipe_id = get_recipe_id(recipe_key=recipe_key, quality=recipe_quality, crafting_machine_key=crafting_machine_key, num_prod_modules=num_prod_modules, num_qual_modules=num_qual_modules)
             recipe_var = self.solver.NumVar(0, self.solver.infinity(), name=recipe_id)
             self.solver_recipes[recipe_id] = recipe_var
-            self.num_modules_var += recipe_var
+            if num_modules > 0:
+                self.num_modules_var += num_modules * recipe_var
 
             for ingredient in ingredients:
                 ingredient_item_data = self.items[ingredient['name']]
@@ -360,6 +363,8 @@ class LinearSolver:
                 if crafting_machine_data is not None:
                     self.setup_recipe_var(recipe_data, crafting_machine_data)
 
+        # needed to help determine byproducts
+        solver_input_item_ids = []
         for input in self.inputs:
             # Create variable for free production of input
             if input['resource']:
@@ -374,14 +379,10 @@ class LinearSolver:
             self.solver_inputs[item_id] = solver_item_var
             self.solver_items[item_id].append(solver_item_var)
             self.solver_costs.append(cost * solver_item_var)
+            solver_input_item_ids.append(item_id)
 
-        for item_id in self.byproducts:
-            # Create variable for free production of input
-            byproduct_id = get_byproduct_id(item_id)
-            solver_item_var = self.solver.NumVar(0, self.solver.infinity(), name=byproduct_id)
-            self.solver_byproducts[item_id] = solver_item_var
-            self.solver_items[item_id].append( (-1) * solver_item_var)
-
+        # needed to help determine byproducts
+        solver_output_item_ids = []
         for output in self.outputs:
             output_item_key = output['key']
             output_quality = QUALITY_LEVELS[output['quality']]
@@ -389,6 +390,19 @@ class LinearSolver:
             amount = output['amount']
             output_id = get_output_id(item_id)
             self.solver_items[item_id].append(-amount)
+
+        if self.allow_byproducts:
+            for item_data in self.items.values():
+                byproduct_item_key = item_data['key']
+                byproduct_qualities = item_data['qualities']
+                for byproduct_quality in byproduct_qualities:
+                    byproduct_item_id = get_item_id(byproduct_item_key, byproduct_quality)
+                    if (byproduct_item_id not in solver_input_item_ids) and (byproduct_item_id not in solver_output_item_ids):
+                        # Create variable for free consumption of byproduct
+                        byproduct_id = get_byproduct_id(byproduct_item_id)
+                        solver_item_var = self.solver.NumVar(0, self.solver.infinity(), name=byproduct_id)
+                        self.solver_byproducts[byproduct_item_id] = solver_item_var
+                        self.solver_items[byproduct_item_id].append( (-1.0) * solver_item_var)
 
         for item_id, solver_vars in self.solver_items.items():
             self.solver.Add(sum(solver_vars)==0)
@@ -410,6 +424,12 @@ class LinearSolver:
                 if input_var.solution_value() > 1e-9:
                     print(f'{input_var.name()}: {input_var.solution_value()}')
             print('')
+            if self.allow_byproducts:
+                print('Byproducts:')
+                for byproduct_var in self.solver_byproducts.values():
+                    if byproduct_var.solution_value() > 1e-9:
+                        print(f'{byproduct_var.name()}: {byproduct_var.solution_value()}')
+                print('')
             print(f'Modules used: {self.num_modules_var.solution_value()}')
             print('')
             print('Recipes used:')
