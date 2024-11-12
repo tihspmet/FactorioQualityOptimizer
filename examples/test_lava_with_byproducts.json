@@ -7,6 +7,7 @@
     "prod_module_quality": "legendary",
     "max_quality_unlocked": "legendary",
     "module_cost": 1.0,
+    "building_cost": 1.0,
     "allow_byproducts": true,
     "inputs": [
         {

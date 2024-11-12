@@ -129,8 +129,8 @@ To see a full list of command line args, we can run `python ./scripts/factorio_s
 ```
 usage: Factorio Solver [-h] [-oi OUTPUT_ITEM] [-oa OUTPUT_AMOUNT] [-oq OUTPUT_QUALITY] [-pt PROD_MODULE_TIER] [-qt QUALITY_MODULE_TIER] [-q MODULE_QUALITY] [-pq PROD_MODULE_QUALITY]
                        [-qq QUALITY_MODULE_QUALITY] [-mq MAX_QUALITY_UNLOCKED] [-ii [...]] [-iq INPUT_QUALITY] [-ir [...]] [-av] [-ar ALLOWED_RECIPES [ALLOWED_RECIPES ...]]
-                       [-dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]] [-ac [ALLOWED_CRAFTING_MACHINES ...]] [-dc [DISALLOWED_CRAFTING_MACHINES ...]] [-rc RESOURCE_COST] [-oc OFFSHORE_COST]
-                       [-mc MODULE_COST] [-o OUTPUT] [-v]
+                       [-dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]] [-ac ALLOWED_CRAFTING_MACHINES [ALLOWED_CRAFTING_MACHINES ...]]
+                       [-dc DISALLOWED_CRAFTING_MACHINES [DISALLOWED_CRAFTING_MACHINES ...]] [-rc RESOURCE_COST] [-oc OFFSHORE_COST] [-mc MODULE_COST] [-bc BUILDING_COST] [-o OUTPUT] [-v]
 
 This program optimizes prod/qual ratios in factories in order to optimize a given output
 
@@ -168,10 +168,10 @@ options:
                         Allowed recipes. Only one of {--allowed-recipes} or {--disallowed-recipes} can be used. See data/space-age-2.0.11.json for recipe keys. (default: None)
   -dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...], --disallowed-recipes DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]
                         Disallowed recipes. Only one of {--allowed-recipes} or {--disallowed-recipes} can be used. See data/space-age-2.0.11.json for recipe keys. (default: None)
-  -ac [ALLOWED_CRAFTING_MACHINES ...], --allowed-crafting-machines [ALLOWED_CRAFTING_MACHINES ...]
+  -ac ALLOWED_CRAFTING_MACHINES [ALLOWED_CRAFTING_MACHINES ...], --allowed-crafting-machines ALLOWED_CRAFTING_MACHINES [ALLOWED_CRAFTING_MACHINES ...]
                         Allowed crafting machines. Only one of {--allowed-crafting-machines} or {--disallowed-crafting-machines} can be used. See data/space-age-2.0.11.json for crafting machine keys.
                         (default: None) (default: None)
-  -dc [DISALLOWED_CRAFTING_MACHINES ...], --disallowed-crafting-machines [DISALLOWED_CRAFTING_MACHINES ...]
+  -dc DISALLOWED_CRAFTING_MACHINES [DISALLOWED_CRAFTING_MACHINES ...], --disallowed-crafting-machines DISALLOWED_CRAFTING_MACHINES [DISALLOWED_CRAFTING_MACHINES ...]
                         Disallowed crafting machines. Only one of {--disallowed-crafting-machines} or {--disdisallowed-crafting-machines} can be used. See data/space-age-2.0.11.json for crafting machine
                         keys. (default: None) (default: None)
   -rc RESOURCE_COST, --resource-cost RESOURCE_COST
@@ -179,6 +179,8 @@ options:
   -oc OFFSHORE_COST, --offshore-cost OFFSHORE_COST
                         Offshore cost (default: 0.1)
   -mc MODULE_COST, --module-cost MODULE_COST
+                        Module cost (default: 1.0)
+  -bc BUILDING_COST, --building-cost BUILDING_COST
                         Module cost (default: 1.0)
   -o OUTPUT, --output OUTPUT
                         Output results to csv (if present) (default: None)

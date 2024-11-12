@@ -6,6 +6,7 @@
     "prod_module_quality": "legendary",
     "max_quality_unlocked": "legendary",
     "module_cost": 0.0,
+    "building_cost": 0.0,
     "disallowed_crafting_machines": [],
     "inputs": [
         {

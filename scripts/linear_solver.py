@@ -131,6 +131,7 @@ class LinearSolver:
         self.disallowed_crafting_machines = config['disallowed_crafting_machines'] if 'disallowed_crafting_machines' in config else None
 
         self.max_quality_unlocked = QUALITY_LEVELS[config['max_quality_unlocked']]
+        self.building_cost = config['building_cost']
         self.module_cost = config['module_cost']
         self.inputs = config['inputs']
         self.outputs = config['outputs']
@@ -178,6 +179,7 @@ class LinearSolver:
         self.solver_byproducts = {}
         self.solver_outputs = {}
         self.num_modules_var = None
+        self.num_buildings_var = None
         self.solver_costs = []
         self.solver = pywraplp.Solver.CreateSolver("GLOP")
         if not self.solver:
@@ -283,6 +285,7 @@ class LinearSolver:
             self.solver_recipes[recipe_id] = recipe_var
             if num_modules > 0:
                 self.num_modules_var += num_modules * recipe_var
+            self.num_buildings_var += recipe_var
 
             for ingredient in ingredients:
                 ingredient_item_data = self.items[ingredient['name']]
@@ -345,6 +348,7 @@ class LinearSolver:
 
     def run(self):
         self.num_modules_var = self.solver.NumVar(0, self.solver.infinity(), name='num-modules')
+        self.num_buildings_var = self.solver.NumVar(0, self.solver.infinity(), name='num-buildings')
 
         for resource_data in self.resources.values():
             self.setup_resource(resource_data)
@@ -390,6 +394,7 @@ class LinearSolver:
             amount = output['amount']
             output_id = get_output_id(item_id)
             self.solver_items[item_id].append(-amount)
+            solver_output_item_ids.append(item_id)
 
         if self.allow_byproducts:
             for item_data in self.items.values():
@@ -408,6 +413,7 @@ class LinearSolver:
             self.solver.Add(sum(solver_vars)==0)
 
         self.solver_costs.append(self.num_modules_var * self.module_cost)
+        self.solver_costs.append(self.num_buildings_var * self.building_cost)
         self.solver.Minimize(sum(self.solver_costs))
 
         # Solve the system.
@@ -430,6 +436,8 @@ class LinearSolver:
                     if byproduct_var.solution_value() > 1e-9:
                         print(f'{byproduct_var.name()}: {byproduct_var.solution_value()}')
                 print('')
+            print(f'Buildings used: {self.num_buildings_var.solution_value()}')
+            print('')
             print(f'Modules used: {self.num_modules_var.solution_value()}')
             print('')
             print('Recipes used:')

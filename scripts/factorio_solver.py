@@ -24,6 +24,7 @@ DEFAULT_MAX_QUALITY_UNLOCKED = 'legendary'
 DEFAULT_OFFSHORE_COST = 0.1
 DEFAULT_RESOURCE_COST = 1.0
 DEFAULT_MODULE_COST = 1.0
+DEFAULT_BUILDING_COST = 1.0
 
 def setup_inputs(resource_cost, offshore_cost):
     inputs = []
@@ -61,9 +62,19 @@ def parse_input_list(items, input_quality):
         inputs.append(input)
     return inputs
 
-# see: https://stackoverflow.com/questions/27146262/create-variable-key-value-pairs-with-argparse-python
-def parse_equals_list(items):
-    return d
+def parse_resources_list(items):
+    inputs = []
+    for item in items:
+        item_key, item_cost_str = item.split('=')
+        item_cost = float(item_cost_str)
+        input = {
+            'key': item_key,
+            'quality': 'normal',
+            'resource': True,
+            'cost': item_cost
+        }
+        inputs.append(input)
+    return inputs
 
 def main():
     codebase_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -89,19 +100,26 @@ def main():
     parser.add_argument('-av', '--allow-byproducts', action='store_true', help='Allows any item besides specified inputs or outputs to exist as a byproduct in the solution. Equivalent to adding void recipes. If not present, byproducts are recycled.')
     parser.add_argument('-ar', '--allowed-recipes', nargs='+', default=None, help='Allowed recipes. Only one of {--allowed-recipes} or {--disallowed-recipes} can be used. See data/space-age-2.0.11.json for recipe keys.')
     parser.add_argument('-dr', '--disallowed-recipes', nargs='+', default=None, help='Disallowed recipes. Only one of {--allowed-recipes} or {--disallowed-recipes} can be used. See data/space-age-2.0.11.json for recipe keys.')
-    parser.add_argument('-ac', '--allowed-crafting-machines', nargs='*', type=str, help='Allowed crafting machines. Only one of {--allowed-crafting-machines} or {--disallowed-crafting-machines} can be used. See data/space-age-2.0.11.json for crafting machine keys. (default: None)')
-    parser.add_argument('-dc', '--disallowed-crafting-machines', nargs='*', type=str, help='Disallowed crafting machines. Only one of {--disallowed-crafting-machines} or {--disdisallowed-crafting-machines} can be used. See data/space-age-2.0.11.json for crafting machine keys. (default: None)')
+    parser.add_argument('-ac', '--allowed-crafting-machines', nargs='+', type=str, help='Allowed crafting machines. Only one of {--allowed-crafting-machines} or {--disallowed-crafting-machines} can be used. See data/space-age-2.0.11.json for crafting machine keys. (default: None)')
+    parser.add_argument('-dc', '--disallowed-crafting-machines', nargs='+', type=str, help='Disallowed crafting machines. Only one of {--disallowed-crafting-machines} or {--disdisallowed-crafting-machines} can be used. See data/space-age-2.0.11.json for crafting machine keys. (default: None)')
     parser.add_argument('-rc', '--resource-cost', type=float, default=DEFAULT_RESOURCE_COST, help='Resource cost')
     parser.add_argument('-oc', '--offshore-cost', type=float, default=DEFAULT_OFFSHORE_COST, help='Offshore cost')
     parser.add_argument('-mc', '--module-cost', type=float, default=DEFAULT_MODULE_COST, help='Module cost')
+    parser.add_argument('-bc', '--building-cost', type=float, default=DEFAULT_MODULE_COST, help='Module cost')
     parser.add_argument('-o', '--output', type=str, default=None, help='Output results to csv (if present)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode. Prints out item and recipe information during setup.')
     args = parser.parse_args()
 
-    if args.input_items != None:
-        inputs = parse_input_list(args.input_items, args.input_quality)
-    else:
+    if (args.input_items == None) and (args.input_resources == None):
         inputs = setup_inputs(args.resource_cost, args.offshore_cost)
+    else:
+        inputs = []
+        if args.input_items != None:
+            input_items = parse_input_list(args.input_items, args.input_quality)
+            inputs.extend(input_items)
+        if args.input_resources != None:
+            input_resources = parse_resources_list(args.input_resources)
+            inputs.extend(input_resources)
 
     config = {
         "data": FACTORIO_DATA_FILENAME,
@@ -112,6 +130,7 @@ def main():
         "max_quality_unlocked": args.max_quality_unlocked,
         "allow_byproducts": args.allow_byproducts,
         "module_cost": args.module_cost,
+        "building_cost": args.building_cost,
         "allowed_recipes": args.allowed_recipes if args.allowed_recipes else None,
         "disallowed_recipes": args.disallowed_recipes if args.disallowed_recipes else None,
         "allowed_crafting_machines": args.allowed_crafting_machines if args.allowed_crafting_machines else None,
