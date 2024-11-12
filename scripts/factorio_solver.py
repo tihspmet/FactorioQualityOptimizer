@@ -80,6 +80,8 @@ def main():
     parser.add_argument('-pt', '--prod-module-tier', type=int, default=3, help='Prod module tier')
     parser.add_argument('-qt', '--quality-module-tier', type=int, default=3, help='Quality module tier')
     parser.add_argument('-q', '--module-quality', type=str, default=DEFAULT_MODULE_QUALITY, help='Module quality')
+    parser.add_argument('-pq', '--prod-module-quality', type=str, default=None, help='Production module quality, overrides --module-quality')
+    parser.add_argument('-qq', '--quality-module-quality', type=str, default=None, help='Quality module quality, overrides --module-quality')
     parser.add_argument('-mq', '--max-quality-unlocked', type=str, default=DEFAULT_MAX_QUALITY_UNLOCKED, help='Max quality unlocked')
     parser.add_argument('-ii', '--input-items', metavar="", nargs='*', default=None, help='Custom input items to the solver. Should be phrased as item-1=cost-1 item-2=cost-2 ..., with no spaces around equals sign.')
     parser.add_argument('-iq', '--input-quality', default=DEFAULT_INPUT_QUALITY, help='Input quality to the solver. Only used if --input-items flag is set.')
@@ -103,9 +105,9 @@ def main():
     config = {
         "data": FACTORIO_DATA_FILENAME,
         "quality_module_tier": args.quality_module_tier,
-        "quality_module_quality": args.module_quality,
+        "quality_module_quality": args.quality_module_quality or args.module_quality,
         "prod_module_tier": args.prod_module_tier,
-        "prod_module_quality": args.module_quality,
+        "prod_module_quality": args.prod_module_quality or args.module_quality,
         "max_quality_unlocked": args.max_quality_unlocked,
         "module_cost": args.module_cost,
         "allowed_recipes": args.allowed_recipes if args.allowed_recipes else None,
