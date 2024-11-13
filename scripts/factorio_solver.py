@@ -90,9 +90,12 @@ def main():
     parser.add_argument('-oq', '--output-quality', type=str, default=DEFAULT_OUTPUT_QUALITY, help='Output item quality')
     parser.add_argument('-pt', '--prod-module-tier', type=int, default=3, help='Prod module tier')
     parser.add_argument('-qt', '--quality-module-tier', type=int, default=3, help='Quality module tier')
+    parser.add_argument('-s', '--check-speed-modules', action='store_true', help='Check beaconed speed modules.')
+    parser.add_argument('-st', '--speed-module-tier', type=int, default=3, help='Speed module tier')
     parser.add_argument('-q', '--module-quality', type=str, default=DEFAULT_MODULE_QUALITY, help='Module quality')
     parser.add_argument('-pq', '--prod-module-quality', type=str, default=None, help='Production module quality, overrides --module-quality')
     parser.add_argument('-qq', '--quality-module-quality', type=str, default=None, help='Quality module quality, overrides --module-quality')
+    parser.add_argument('-sq', '--speed-module-quality', type=str, default=None, help='Speed module quality, overrides --module-quality')
     parser.add_argument('-mq', '--max-quality-unlocked', type=str, default=DEFAULT_MAX_QUALITY_UNLOCKED, help='Max quality unlocked')
     parser.add_argument('-ii', '--input-items', metavar="", nargs='*', default=None, help='Custom input items to the solver. Should be phrased as item-1=cost-1 item-2=cost-2 ..., with no spaces around equals sign.')
     parser.add_argument('-iq', '--input-quality', default=DEFAULT_INPUT_QUALITY, help='Input quality to the solver. Only used if --input-items flag is set.')
@@ -127,6 +130,9 @@ def main():
         "quality_module_quality": args.quality_module_quality or args.module_quality,
         "prod_module_tier": args.prod_module_tier,
         "prod_module_quality": args.prod_module_quality or args.module_quality,
+        "check_speed_modules": args.check_speed_modules,
+        "speed_module_tier": args.speed_module_tier,
+        "speed_module_quality": args.speed_module_quality or args.module_quality,
         "max_quality_unlocked": args.max_quality_unlocked,
         "allow_byproducts": args.allow_byproducts,
         "module_cost": args.module_cost,

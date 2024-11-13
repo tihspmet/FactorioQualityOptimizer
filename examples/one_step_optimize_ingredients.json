@@ -4,9 +4,11 @@
     "quality_module_quality": "legendary",
     "prod_module_tier": 3,
     "prod_module_quality": "legendary",
+    "speed_module_tier": 3,
+    "speed_module_quality": "legendary",
     "max_quality_unlocked": "legendary",
     "module_cost": 0.0,
-    "building_cost": 1.0,
+    "building_cost": 0.0,
     "disallowed_crafting_machines": [],
     "inputs": [
         {

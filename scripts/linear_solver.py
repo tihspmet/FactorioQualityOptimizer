@@ -1,6 +1,7 @@
 import argparse
 import itertools
 import json
+import math
 import os
 import pandas as pd
 from collections import defaultdict
@@ -20,7 +21,7 @@ QUALITY_PROBABILITIES = [
     [.025, .032, .04, .047, .062]
 ]
 
-QUALITY_SPEED_PENALTIES = [-0.05, -0.05, -0.05]
+SPEED_PENALTIES_PER_QUALITY_MODULE = [0.05, 0.05, 0.05]
 
 PROD_BONUSES = [
     [.04, .05, .06, .07, 0.1],
@@ -28,7 +29,28 @@ PROD_BONUSES = [
     [.1, .13, .16, .19, .25]
 ]
 
-PROD_SPEED_PENALTIES = [-0.05, -0.1, -0.15]
+SPEED_PENALTIES_PER_PROD_MODULE = [0.05, 0.1, 0.15]
+
+SPEED_BONUSES = [
+    [0.2, 0.26, 0.32, 0.38, 0.5],
+    [0.3, 0.39, 0.48, 0.57, 0.75],
+    [0.5, 0.65, 0.8, 0.95, 1.25]
+]
+
+QUALITY_PENALTIES_PER_SPEED_MODULE = [.01, .015, .025]
+
+# only check up to 8 beacons x 2 modules each
+# set the number of beacons to ceil(num_modules/2)
+POSSIBLE_NUM_BEACONED_SPEED_MODULES = list(range(17))
+
+# todo - allow quality beacons
+BEACON_EFFICIENCY = 1.5
+
+def calculate_num_effective_speed_modules(num_beaconed_speed_modules):
+    if num_beaconed_speed_modules == 0:
+        return 0
+    num_beacons = math.ceil(num_beaconed_speed_modules/2)
+    return num_beaconed_speed_modules * BEACON_EFFICIENCY * (num_beacons ** (-0.5))
 
 def calculate_expected_amount(result_data, prod_bonus):
     # see here: https://lua-api.factorio.com/latest/types/ItemProductPrototype.html
@@ -74,8 +96,8 @@ def calculate_quality_probability_factor(starting_quality, ending_quality, max_q
         print(f'max_quality_unlocked: {max_quality_unlocked}')
         raise RuntimeError('Reached impossible condition in calculate_quality_probability_factor')
 
-def get_recipe_id(recipe_key, quality, crafting_machine_key, num_qual_modules, num_prod_modules):
-    return f'{QUALITY_NAMES[quality]}__{recipe_key}__{crafting_machine_key}__{num_qual_modules}-qual__{num_prod_modules}-prod'
+def get_recipe_id(recipe_key, quality, crafting_machine_key, num_qual_modules, num_prod_modules, num_beaconed_speed_modules):
+    return f'{QUALITY_NAMES[quality]}__{recipe_key}__{crafting_machine_key}__{num_qual_modules}-qual__{num_prod_modules}-prod__{num_beaconed_speed_modules}-beaconed-speed'
 
 def parse_recipe_id(recipe_id):
     objs = recipe_id.split('__')
@@ -119,8 +141,16 @@ class LinearSolver:
         prod_module_quality_level = QUALITY_LEVELS[config['prod_module_quality']]
         self.prod_module_bonus = PROD_BONUSES[prod_module_tier-1][prod_module_quality_level]
 
-        self.quality_speed_penalty = QUALITY_SPEED_PENALTIES[quality_module_tier-1]
-        self.prod_speed_penalty = PROD_SPEED_PENALTIES[prod_module_tier-1]
+        speed_module_tier = config['speed_module_tier']
+        speed_module_quality_level = QUALITY_LEVELS[config['speed_module_quality']]
+        self.speed_module_bonus = SPEED_BONUSES[speed_module_tier-1][speed_module_quality_level]
+
+        check_speed_modules = config['check_speed_modules'] if 'check_speed_modules' in config else None
+        self.possible_num_beaconed_speed_modules = POSSIBLE_NUM_BEACONED_SPEED_MODULES if check_speed_modules else [0]
+
+        self.speed_penalty_per_quality_module = SPEED_PENALTIES_PER_QUALITY_MODULE[quality_module_tier-1]
+        self.speed_penalty_per_prod_module = SPEED_PENALTIES_PER_PROD_MODULE[prod_module_tier-1]
+        self.quality_penalty_per_speed_module = QUALITY_PENALTIES_PER_SPEED_MODULE[speed_module_tier-1]
 
         self.allow_byproducts = config['allow_byproducts'] if 'allow_byproducts' in config  else None
 
@@ -268,19 +298,23 @@ class LinearSolver:
         recipe_qualities = recipe_data['qualities']
         num_possible_qual_modules = list(range(crafting_machine_module_slots+1))
 
-        for recipe_quality, num_qual_modules in itertools.product(recipe_qualities, num_possible_qual_modules):
+        for recipe_quality, num_qual_modules, num_beaconed_speed_modules in itertools.product(recipe_qualities, num_possible_qual_modules, self.possible_num_beaconed_speed_modules):
             if allow_productivity:
                 num_prod_modules = crafting_machine_module_slots - num_qual_modules
             else:
                 num_prod_modules = 0
-            num_modules = num_qual_modules + num_prod_modules
+            # TODO: maybe speed modules in beacons should cost less since they can be spread across multiple assemblers
+            num_modules = num_qual_modules + num_prod_modules + num_beaconed_speed_modules
+
+            num_effective_speed_modules = calculate_num_effective_speed_modules(num_beaconed_speed_modules)
+            quality_penalty_from_speed_modules = num_effective_speed_modules * self.quality_penalty_per_speed_module
 
             prod_bonus = num_prod_modules * self.prod_module_bonus + crafting_machine_prod_bonus
-            speed_factor = crafting_machine_speed * (1 - (num_qual_modules * self.quality_speed_penalty + num_prod_modules * self.prod_speed_penalty))
+            speed_factor = crafting_machine_speed * (1 + (num_effective_speed_modules * self.speed_module_bonus) - (num_qual_modules * self.speed_penalty_per_quality_module + num_prod_modules * self.speed_penalty_per_prod_module))
 
             # we want recipe_var to represent the number of buildings when all is finished
             # that way (recipe_var * module_cost) accurately represents the number of modules used per recipe
-            recipe_id = get_recipe_id(recipe_key=recipe_key, quality=recipe_quality, crafting_machine_key=crafting_machine_key, num_prod_modules=num_prod_modules, num_qual_modules=num_qual_modules)
+            recipe_id = get_recipe_id(recipe_key=recipe_key, quality=recipe_quality, crafting_machine_key=crafting_machine_key, num_prod_modules=num_prod_modules, num_qual_modules=num_qual_modules, num_beaconed_speed_modules=num_beaconed_speed_modules)
             recipe_var = self.solver.NumVar(0, self.solver.infinity(), name=recipe_id)
             self.solver_recipes[recipe_id] = recipe_var
             if num_modules > 0:
@@ -312,7 +346,7 @@ class LinearSolver:
                     expected_amount = calculate_expected_amount(result_data, prod_bonus)
 
                     if result_item_data['allows_quality']:
-                        quality_percent = num_qual_modules * self.quality_module_probability
+                        quality_percent = num_qual_modules * self.quality_module_probability - num_effective_speed_modules * self.quality_penalty_per_speed_module
                         quality_probability_factor = calculate_quality_probability_factor(recipe_quality, result_quality, self.max_quality_unlocked, quality_percent)
                     else:
                         quality_probability_factor = 1.0
