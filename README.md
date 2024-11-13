@@ -127,9 +127,9 @@ There are four scripts in the `scripts` folder:
 To see a full list of command line args, we can run `python ./scripts/factorio_solver.py --help`:
 
 ```
-usage: Factorio Solver [-h] [-oi OUTPUT_ITEM] [-oa OUTPUT_AMOUNT] [-oq OUTPUT_QUALITY] [-pt PROD_MODULE_TIER] [-qt QUALITY_MODULE_TIER] [-q MODULE_QUALITY] [-pq PROD_MODULE_QUALITY]
-                       [-qq QUALITY_MODULE_QUALITY] [-mq MAX_QUALITY_UNLOCKED] [-ii [...]] [-iq INPUT_QUALITY] [-ir [...]] [-av] [-ar ALLOWED_RECIPES [ALLOWED_RECIPES ...]]
-                       [-dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]] [-ac ALLOWED_CRAFTING_MACHINES [ALLOWED_CRAFTING_MACHINES ...]]
+usage: Factorio Solver [-h] [-oi OUTPUT_ITEM] [-oa OUTPUT_AMOUNT] [-oq OUTPUT_QUALITY] [-pt PROD_MODULE_TIER] [-qt QUALITY_MODULE_TIER] [-s] [-st SPEED_MODULE_TIER] [-q MODULE_QUALITY]
+                       [-pq PROD_MODULE_QUALITY] [-qq QUALITY_MODULE_QUALITY] [-sq SPEED_MODULE_QUALITY] [-mq MAX_QUALITY_UNLOCKED] [-ii [...]] [-iq INPUT_QUALITY] [-ir [...]] [-av]
+                       [-ar ALLOWED_RECIPES [ALLOWED_RECIPES ...]] [-dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]] [-ac ALLOWED_CRAFTING_MACHINES [ALLOWED_CRAFTING_MACHINES ...]]
                        [-dc DISALLOWED_CRAFTING_MACHINES [DISALLOWED_CRAFTING_MACHINES ...]] [-rc RESOURCE_COST] [-oc OFFSHORE_COST] [-mc MODULE_COST] [-bc BUILDING_COST] [-o OUTPUT] [-v]
 
 This program optimizes prod/qual ratios in factories in order to optimize a given output
@@ -146,12 +146,18 @@ options:
                         Prod module tier (default: 3)
   -qt QUALITY_MODULE_TIER, --quality-module-tier QUALITY_MODULE_TIER
                         Quality module tier (default: 3)
+  -s, --check-speed-modules
+                        Check beaconed speed modules. (default: False)
+  -st SPEED_MODULE_TIER, --speed-module-tier SPEED_MODULE_TIER
+                        Speed module tier (default: 3)
   -q MODULE_QUALITY, --module-quality MODULE_QUALITY
                         Module quality (default: legendary)
   -pq PROD_MODULE_QUALITY, --prod-module-quality PROD_MODULE_QUALITY
                         Production module quality, overrides --module-quality (default: None)
   -qq QUALITY_MODULE_QUALITY, --quality-module-quality QUALITY_MODULE_QUALITY
                         Quality module quality, overrides --module-quality (default: None)
+  -sq SPEED_MODULE_QUALITY, --speed-module-quality SPEED_MODULE_QUALITY
+                        Speed module quality, overrides --module-quality (default: None)
   -mq MAX_QUALITY_UNLOCKED, --max-quality-unlocked MAX_QUALITY_UNLOCKED
                         Max quality unlocked (default: legendary)
   -ii [ ...], --input-items [ ...]
