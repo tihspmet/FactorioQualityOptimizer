@@ -128,8 +128,8 @@ To see a full list of command line args, we can run `python ./scripts/factorio_s
 
 ```
 usage: Factorio Solver [-h] [-oi OUTPUT_ITEM] [-oa OUTPUT_AMOUNT] [-oq OUTPUT_QUALITY] [-pt PROD_MODULE_TIER] [-qt QUALITY_MODULE_TIER] [-s] [-st SPEED_MODULE_TIER] [-q MODULE_QUALITY]
-                       [-pq PROD_MODULE_QUALITY] [-qq QUALITY_MODULE_QUALITY] [-sq SPEED_MODULE_QUALITY] [-mq MAX_QUALITY_UNLOCKED] [-ii [...]] [-iq INPUT_QUALITY] [-ir [...]] [-av]
-                       [-ar ALLOWED_RECIPES [ALLOWED_RECIPES ...]] [-dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]] [-ac ALLOWED_CRAFTING_MACHINES [ALLOWED_CRAFTING_MACHINES ...]]
+                       [-pq PROD_MODULE_QUALITY] [-qq QUALITY_MODULE_QUALITY] [-sq SPEED_MODULE_QUALITY] [-bq BUILDING_QUALITY] [-mq MAX_QUALITY_UNLOCKED] [-ii [...]] [-iq INPUT_QUALITY] [-ir [...]]
+                       [-av] [-ar ALLOWED_RECIPES [ALLOWED_RECIPES ...]] [-dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]] [-ac ALLOWED_CRAFTING_MACHINES [ALLOWED_CRAFTING_MACHINES ...]]
                        [-dc DISALLOWED_CRAFTING_MACHINES [DISALLOWED_CRAFTING_MACHINES ...]] [-rc RESOURCE_COST] [-oc OFFSHORE_COST] [-mc MODULE_COST] [-bc BUILDING_COST] [-o OUTPUT] [-v]
 
 This program optimizes prod/qual ratios in factories in order to optimize a given output
@@ -158,6 +158,8 @@ options:
                         Quality module quality, overrides --module-quality (default: None)
   -sq SPEED_MODULE_QUALITY, --speed-module-quality SPEED_MODULE_QUALITY
                         Speed module quality, overrides --module-quality (default: None)
+  -bq BUILDING_QUALITY, --building-quality BUILDING_QUALITY
+                        Building quality. Affects both crafting speed and beacon efficiency. (default: legendary)
   -mq MAX_QUALITY_UNLOCKED, --max-quality-unlocked MAX_QUALITY_UNLOCKED
                         Max quality unlocked (default: legendary)
   -ii [ ...], --input-items [ ...]

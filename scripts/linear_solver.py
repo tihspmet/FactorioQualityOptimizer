@@ -39,18 +39,20 @@ SPEED_BONUSES = [
 
 QUALITY_PENALTIES_PER_SPEED_MODULE = [.01, .015, .025]
 
+# used for building crafting speed
+QUALITY_BONUSES = [0.0, 0.3, 0.6, 0.9, 1.5]
+
 # only check up to 8 beacons x 2 modules each
 # set the number of beacons to ceil(num_modules/2)
 POSSIBLE_NUM_BEACONED_SPEED_MODULES = list(range(17))
 
-# todo - allow quality beacons
-BEACON_EFFICIENCY = 1.5
+BEACON_EFFICIENCIES = [1.5, 1.7, 1.9, 2.1, 2.5]
 
-def calculate_num_effective_speed_modules(num_beaconed_speed_modules):
+def calculate_num_effective_speed_modules(num_beaconed_speed_modules, beacon_efficiency):
     if num_beaconed_speed_modules == 0:
         return 0
     num_beacons = math.ceil(num_beaconed_speed_modules/2)
-    return num_beaconed_speed_modules * BEACON_EFFICIENCY * (num_beacons ** (-0.5))
+    return num_beaconed_speed_modules * beacon_efficiency * (num_beacons ** (-0.5))
 
 def calculate_expected_amount(result_data, prod_bonus):
     # see here: https://lua-api.factorio.com/latest/types/ItemProductPrototype.html
@@ -151,6 +153,10 @@ class LinearSolver:
         self.speed_penalty_per_quality_module = SPEED_PENALTIES_PER_QUALITY_MODULE[quality_module_tier-1]
         self.speed_penalty_per_prod_module = SPEED_PENALTIES_PER_PROD_MODULE[prod_module_tier-1]
         self.quality_penalty_per_speed_module = QUALITY_PENALTIES_PER_SPEED_MODULE[speed_module_tier-1]
+
+        building_quality = QUALITY_LEVELS[config['building_quality']]
+        self.building_speed_bonus = QUALITY_BONUSES[building_quality]
+        self.beacon_efficiency = BEACON_EFFICIENCIES[building_quality]
 
         self.allow_byproducts = config['allow_byproducts'] if 'allow_byproducts' in config  else None
 
@@ -306,11 +312,16 @@ class LinearSolver:
             # TODO: maybe speed modules in beacons should cost less since they can be spread across multiple assemblers
             num_modules = num_qual_modules + num_prod_modules + num_beaconed_speed_modules
 
-            num_effective_speed_modules = calculate_num_effective_speed_modules(num_beaconed_speed_modules)
+            num_effective_speed_modules = calculate_num_effective_speed_modules(num_beaconed_speed_modules, self.beacon_efficiency)
             quality_penalty_from_speed_modules = num_effective_speed_modules * self.quality_penalty_per_speed_module
 
             prod_bonus = num_prod_modules * self.prod_module_bonus + crafting_machine_prod_bonus
-            speed_factor = crafting_machine_speed * (1 + (num_effective_speed_modules * self.speed_module_bonus) - (num_qual_modules * self.speed_penalty_per_quality_module + num_prod_modules * self.speed_penalty_per_prod_module))
+            speed_factor = crafting_machine_speed * (1 + \
+                    + (num_effective_speed_modules * self.speed_module_bonus) \
+                    + self.building_speed_bonus \
+                    - (num_qual_modules * self.speed_penalty_per_quality_module) \
+                    - (num_prod_modules * self.speed_penalty_per_prod_module) \
+            )
 
             # we want recipe_var to represent the number of buildings when all is finished
             # that way (recipe_var * module_cost) accurately represents the number of modules used per recipe
