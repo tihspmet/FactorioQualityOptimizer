@@ -191,7 +191,7 @@ class LinearSolver:
         if self.allowed_recipes is not None:
             return (recipe_key in self.allowed_recipes)
         elif self.disallowed_recipes is not None:
-            return (recipe_key not in self.allowed_recipes)
+            return (recipe_key not in self.disallowed_recipes)
         else:
             return True
 
