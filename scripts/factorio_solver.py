@@ -79,6 +79,13 @@ def parse_resources_list(items):
         inputs.append(input)
     return inputs
 
+def parse_recipe_prod_modifiers(recipes):
+    recipe_prod_modifiers = {}
+    for recipe in recipes:
+        recipe_key, recipe_bonus_str = recipe.split('=')
+        recipe_prod_modifiers[recipe_key] = float(recipe_bonus_str)
+    return recipe_prod_modifiers
+
 def main():
     codebase_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     default_config_path = os.path.join(codebase_path, 'examples', 'generic_linear_solver', 'one_step_example.json')
@@ -105,6 +112,7 @@ def main():
     parser.add_argument('-iq', '--input-quality', default=DEFAULT_INPUT_QUALITY, help='Input quality to the solver. Only used if --input-items flag is set.')
     parser.add_argument('-ir', '--input-resources', metavar="", nargs='*', default=None, help='Custom input resources to the solver. Should be phrased as resource-1=cost-1 resource-2=cost-2 ..., with no spaces around equals sign. If not present, uses all resources on all planets. See data/space-age-2.0.11.json for resource keys.')
     parser.add_argument('-ab', '--allow-byproducts', action='store_true', help='Allows any item besides specified inputs or outputs to exist as a byproduct in the solution. Equivalent to adding void recipes. If not present, byproducts are recycled.')
+    parser.add_argument('-rp', '--recipe-prod-modifiers', metavar="", nargs='*', default=None, help='Recipe productivity modifiers obtained from technology tree. Should be phrased as recipe-1=modifier-1 recipe-2=modifier-2 ..., with no spaces around equals sign.')
     parser.add_argument('-ar', '--allowed-recipes', nargs='+', default=None, help='Allowed recipes. Only one of {--allowed-recipes} or {--disallowed-recipes} can be used. See data/space-age-2.0.11.json for recipe keys.')
     parser.add_argument('-dr', '--disallowed-recipes', nargs='+', default=None, help='Disallowed recipes. Only one of {--allowed-recipes} or {--disallowed-recipes} can be used. See data/space-age-2.0.11.json for recipe keys.')
     parser.add_argument('-ac', '--allowed-crafting-machines', nargs='+', type=str, help='Allowed crafting machines. Only one of {--allowed-crafting-machines} or {--disallowed-crafting-machines} can be used. See data/space-age-2.0.11.json for crafting machine keys. (default: None)')
@@ -128,6 +136,8 @@ def main():
             input_resources = parse_resources_list(args.input_resources)
             inputs.extend(input_resources)
 
+    recipe_prod_modifiers = parse_recipe_prod_modifiers(args.recipe_prod_modifiers) if args.recipe_prod_modifiers else None
+
     config = {
         "data": FACTORIO_DATA_FILENAME,
         "quality_module_tier": args.quality_module_tier,
@@ -142,6 +152,7 @@ def main():
         "allow_byproducts": args.allow_byproducts,
         "module_cost": args.module_cost,
         "building_cost": args.building_cost,
+        "recipe_prod_modifiers": recipe_prod_modifiers,
         "allowed_recipes": args.allowed_recipes if args.allowed_recipes else None,
         "disallowed_recipes": args.disallowed_recipes if args.disallowed_recipes else None,
         "allowed_crafting_machines": args.allowed_crafting_machines if args.allowed_crafting_machines else None,

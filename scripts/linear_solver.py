@@ -48,6 +48,9 @@ POSSIBLE_NUM_BEACONED_SPEED_MODULES = list(range(17))
 
 BEACON_EFFICIENCIES = [1.5, 1.7, 1.9, 2.1, 2.5]
 
+# defined in recipe prototype, but currently all vanilla recipes use the default
+MAXIMUM_PRODUCTIVITY = 3.0
+
 def calculate_num_effective_speed_modules(num_beaconed_speed_modules, beacon_efficiency):
     if num_beaconed_speed_modules == 0:
         return 0
@@ -159,6 +162,8 @@ class LinearSolver:
         self.beacon_efficiency = BEACON_EFFICIENCIES[building_quality]
 
         self.allow_byproducts = config['allow_byproducts'] if 'allow_byproducts' in config  else None
+
+        self.recipe_prod_modifiers = config['recipe_prod_modifiers'] if 'recipe_prod_modifiers' in config else None
 
         self.allowed_recipes = config['allowed_recipes'] if 'allowed_recipes' in config else None
         self.disallowed_recipes = config['disallowed_recipes'] if 'disallowed_recipes' in config else None
@@ -304,6 +309,8 @@ class LinearSolver:
         recipe_qualities = recipe_data['qualities']
         num_possible_qual_modules = list(range(crafting_machine_module_slots+1))
 
+        recipe_prod_modifier = self.recipe_prod_modifiers.get(recipe_key, 0.0) if self.recipe_prod_modifiers else 0.0
+
         for recipe_quality, num_qual_modules, num_beaconed_speed_modules in itertools.product(recipe_qualities, num_possible_qual_modules, self.possible_num_beaconed_speed_modules):
             if allow_productivity:
                 num_prod_modules = crafting_machine_module_slots - num_qual_modules
@@ -315,7 +322,7 @@ class LinearSolver:
             num_effective_speed_modules = calculate_num_effective_speed_modules(num_beaconed_speed_modules, self.beacon_efficiency)
             quality_penalty_from_speed_modules = num_effective_speed_modules * self.quality_penalty_per_speed_module
 
-            prod_bonus = num_prod_modules * self.prod_module_bonus + crafting_machine_prod_bonus
+            prod_bonus = min(MAXIMUM_PRODUCTIVITY, num_prod_modules * self.prod_module_bonus + crafting_machine_prod_bonus + recipe_prod_modifier)
             speed_factor = crafting_machine_speed * (1 + \
                     + (num_effective_speed_modules * self.speed_module_bonus) \
                     + self.building_speed_bonus \

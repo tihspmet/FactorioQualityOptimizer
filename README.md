@@ -172,6 +172,8 @@ options:
   -av, --allow-byproducts
                         Allows any item besides specified inputs or outputs to exist as a byproduct in the solution. Equivalent to adding void recipes. If not present, byproducts are recycled. (default:
                         False)
+  -rp [ ...], --recipe-prod-modifiers [ ...]
+                        Recipe productivity modifiers obtained from technology tree. Should be phrased as recipe-1=modifier-1 recipe-2=modifier-2 ..., with no spaces around equals sign. (default: None)
   -ar ALLOWED_RECIPES [ALLOWED_RECIPES ...], --allowed-recipes ALLOWED_RECIPES [ALLOWED_RECIPES ...]
                         Allowed recipes. Only one of {--allowed-recipes} or {--disallowed-recipes} can be used. See data/space-age-2.0.11.json for recipe keys. (default: None)
   -dr DISALLOWED_RECIPES [DISALLOWED_RECIPES ...], --disallowed-recipes DISALLOWED_RECIPES [DISALLOWED_RECIPES ...]
