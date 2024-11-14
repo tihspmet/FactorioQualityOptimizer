@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 '''
 Wrapper for `linear_solver.py` that is more user-friendly than linear_solver.py
 Contains many convenience args to make it quick and easy to optimize actual factorio setups.

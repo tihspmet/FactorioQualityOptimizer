@@ -485,6 +485,7 @@ class LinearSolver:
             print('')
             print(f'Modules used: {self.num_modules_var.solution_value()}')
             print('')
+            self.print_machine_layout()
             print('Recipes used:')
             for recipe_var in self.solver_recipes.values():
                 if(recipe_var.solution_value()>1e-9):
@@ -504,6 +505,36 @@ class LinearSolver:
 
         else:
             print("The problem does not have an optimal solution.")
+
+    def print_machine_layout(self):
+        variants = defaultdict(list)
+        for recipe_var in self.solver_recipes.values():
+            if(recipe_var.solution_value()>1e-9):
+                data = parse_recipe_id(recipe_var.name())
+                data['solution_value'] = recipe_var.solution_value()
+                variants[data['recipe_name'], data['machine']].append(data)
+
+        print("Machine layout:")
+
+        for (name, machine), vars in variants.items():
+            try:
+                machine = self.items[machine]['localized_name']['en']
+                name = self.recipes[name]['localized_name']['en']
+            except KeyError:
+                pass
+            quals = []
+            for var in vars:
+                mods = ''
+                if int(var['num_qual_modules']):
+                    mods += f'{var["num_qual_modules"]}Q'
+                if int(var['num_prod_modules']):
+                    mods += f'{var["num_prod_modules"]}P'
+                if mods:
+                    mods = ' ' + mods
+                quals.append(f"{var['recipe_quality']}{mods}")
+            print(f'{name} in {machine}: {", ".join(quals)}')
+        print()
+
 
 def main():
     codebase_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
